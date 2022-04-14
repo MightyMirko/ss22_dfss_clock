@@ -22,10 +22,14 @@ https://klyshko.github.io/teaching/2019-02-22-teaching
 '''
 Digital sound
 
-When you hear a sound your ear’s membrane oscillates because the density and pressure of the air in close proximity to the ear oscillate as well. Thus, sound recordings contain the relative signal of these oscilations. Digital audio is sound that has been recorded in, or converted into, digital form. In digital audio, the sound wave of the audio signal is encoded as numerical samples in continuous sequence. For example, in CD (or WAV) audio, samples are taken 44100 times per second each with 16 bit sample depth, i.e. there are 2^16 = 65536 possible values of the signal: from -32768 to 32767. For the example below, a sound wave, in red, represented digitally, in blue (after sampling and 4-bit quantization).
+When you hear a sound your ear’s membrane oscillates because the density and pressure of the air in close proximity 
+to the ear oscillate as well. Thus, sound recordings contain the relative signal of these oscilations. Digital audio is 
+sound that has been recorded in, or converted into, digital form. In digital audio, the sound wave of the audio signal 
+is encoded as numerical samples in continuous sequence. For example, in CD (or WAV) audio, samples are taken 44100 times 
+per second each with 16 bit sample depth, i.e. there are 2^16 = 65536 possible values of the signal: from -32768 to 32767. 
+For the example below, a sound wave, in red, represented digitally, in blue (after sampling and 4-bit quantization).
 
 '''
-
 
 def plotSounds(data, filename):
     """
