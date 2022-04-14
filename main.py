@@ -59,20 +59,19 @@ def getWavFromFolder(wavdir):
             pfad = pjoin(wavdir, file)
             wavfiles.append(pfad)
             filenames.append(filename)
-            samplerate, data = wavfile.read(filename=file)
+            samplerate, data = wavfile.read(filename=pfad)
             df[filename] = data
-            df.plot(
-            )
     return wavfiles, df
 
 
-def main():
+if __name__ == "__main__":
+
     print('hello World'
           )
 
     audio_dir = (r'rohdaten/')
 
     files, df = getWavFromFolder(wavdir=audio_dir)
-    print(df
-          )
     df.plot()
+    for col in df:
+        plotSounds(data=col, filename='test')
