@@ -134,3 +134,4 @@ dmypy.json
 /.idea/inspectionProfiles/profiles_settings.xml
 /.idea/ss22_dfss_clock.iml
 /.idea/vcs.xml
+/.idea/.gitignore
