@@ -6,6 +6,8 @@ import scipy.io
 import math
 from scipy import stats
 import matplotlib.pyplot as plt
+plt.rcParams['figure.dpi'] = 150
+#plt.rcParams['figure.figsize'] = (12, 7)
 from scipy.io import wavfile
 from os.path import dirname, join as pjoin
 from os import listdir
@@ -31,28 +33,32 @@ For the example below, a sound wave, in red, represented digitally, in blue (aft
 
 '''
 
-def plotSounds(data, filename):
+def plotSounds(data, filename, samplerate=96000, xlab = 'Time [s]', ylab='Amplitude'):
     """
+    Plottet eine Spalte oder ein Vektor in Timedomain
 
-    :param data:
-    :param filename:
+    :param data: hier kommt eine Series (Spalte Dataframe) hinein.
+    :param filename: Legendenname
+    :param samplerate: 96000 sind Standard. Wird für die Zeitachse genommen
+    :param xlab: Label auf Abszisse
+    :param ylab: Label auf Ordinate
     :return:
     """
-    length = data.shape[0] / 96000
+    length = data.shape[0] / samplerate
     time = np.linspace(0., length, data.shape[0])
     plt.plot(time, data, label=filename)
-    plt.legend()
+    plt.legend(loc='upper right')
     plt.grid(True)
-    plt.xlabel("Time [s]")
-    plt.ylabel("Amplitude")
+    plt.xlabel(xlab)
+    plt.ylabel(ylab)
     plt.show()
 
 
 def getWavFromFolder(wavdir):
     """
-
-    :param wavdir: 
-    :return: 
+    Sucht alle Wavdateien in einem Ordner und speichert die Rohdaten in einem gemeinsamenem Objekt
+    :param wavdir: Pfad wo die wav daten liegen
+    :return: relativer Pfad mit Dateiname und das pandas Dataframe für die Rohdaten
     """
     wavfiles = []
     filenames = []
@@ -69,13 +75,14 @@ def getWavFromFolder(wavdir):
 
 
 if __name__ == "__main__":
+    #
+    print('hello World')
 
-    print('hello World'
-          )
+    audio_dir = (r'rohdaten/') # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
+    files, df = getWavFromFolder(wavdir=audio_dir) # ich mag explizite Programmierung. Also wavdir=...,
+    # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
 
-    audio_dir = (r'rohdaten/')
 
-    files, df = getWavFromFolder(wavdir=audio_dir)
-    df.plot()
-    for col in df:
-        plotSounds(data=col, filename='test')
+    # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
+    for (columnName, columnData) in df.iteritems():
+        plotSounds(data=columnData, filename=columnName)
