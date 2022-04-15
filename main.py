@@ -33,7 +33,7 @@ For the example below, a sound wave, in red, represented digitally, in blue (aft
 
 '''
 
-def plotSounds(data, filename, samplerate=96000, xlab = 'Time [s]', ylab='Amplitude'):
+def plotSounds(data, filename, samplerate = 48000, xlab = 'Time [s]', ylab='Amplitude'):
     """
     Plottet eine Spalte oder ein Vektor in Timedomain
 
@@ -49,6 +49,9 @@ def plotSounds(data, filename, samplerate=96000, xlab = 'Time [s]', ylab='Amplit
     plt.plot(time, data, label=filename)
     plt.legend(loc='upper right')
     plt.grid(True)
+    plt.xscale('linear')
+    plt.yscale('linear')
+    plt.xlim(xmax=2.01, xmin = -0.01)
     plt.xlabel(xlab)
     plt.ylabel(ylab)
     plt.show()
