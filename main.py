@@ -101,9 +101,10 @@ if __name__ == "__main__":
             # xf = fft.fftfreq(yf)
             # Number of sample points
 
-            N = 44000
+            N = 48000
+            nyquist_shannon = 2
             # sample spacing
-            T = 1.0 / N / 10
+            T = 1.0 / N / nyquist_shannon
             print(T)
             x = np.linspace(start=0.0, stop=20e3, num=N, endpoint=False)
             y = columnData.to_numpy()
