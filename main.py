@@ -38,6 +38,11 @@ https://dewesoft.com/daq/guide-to-fft-analysis
 '''
 
 
+'''
+app.diagrams.net
+
+'''
+
 def plotSounds(data, filename, samplerate=48000, xlab='Time [s]', ylab='Amplitude'):
     """
     Plottet eine Spalte oder ein Vektor in Timedomain
