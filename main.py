@@ -8,9 +8,10 @@ plt.rcParams['figure.dpi'] = 150
 # plt.rcParams['figure.figsize'] = (12, 7)
 from scipy.io import wavfile
 from scipy import signal
-
 from os.path import join as pjoin
 from os import listdir
+from scipy.fft import fft, fftfreq
+
 
 '''
 @Source
@@ -94,34 +95,30 @@ if __name__ == "__main__":
     audio_dir = (r'rohdaten/')  # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
     files, df = getWavFromFolder(wavdir=audio_dir)  # ich mag explizite Programmierung. Also wavdir=...,
     # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
-    from scipy.fft import fft, fftfreq
 
     # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
     for (columnName, columnData) in df.iteritems():
         if not '26' in columnName:
             continue
         else:
-            plotSounds(data=columnData, filename=columnName)
-            # yf = fft.fft(columnData)
-            # xf = fft.fftfreq(yf)
-            # Number of sample points
-
-            N = 96000
-            nyquist_shannon = 2
+            #plotSounds(data=columnData, filename=columnName)
+            sample_rate = 600
+            signal_length = 2
             # sample spacing
-            T = 1.0 / N / nyquist_shannon
+            abtastzeit = 1.0 / (9*sample_rate)
 
-            #print(T)
+#            x = np.linspace(0.0, sample_rate * abtastzeit, sample_rate, endpoint=False)
+#           y = np.sin(50.0 * 2.0 * np.pi * x) + 0.5 * np.sin(80.0 * 2.0 * np.pi * x)
 
-            x = np.linspace(start=0.0, stop=2, num=N, endpoint=False)
+            x = np.linspace(start=0.0, stop=2, num=signal_length*sample_rate, endpoint=False)
             y = columnData.to_numpy()
             yf = fft(y)
-            print(yf)
-            print(np.abs(yf))
-            xf = fftfreq(N, T)[:N // 2]
+            xf = fftfreq(sample_rate, abtastzeit)[:sample_rate // 2]
 
-            plt.plot(xf, 2.0 / N * np.abs(yf[0:N // 2]))
-            plt.xlim(xmax=4e3, xmin=0)
+            apfel = np.abs(yf[0:sample_rate // 2])
+            print(apfel)
+            plt.plot(xf, 2.0 / sample_rate * np.abs(yf[0:sample_rate // 2]))
+            plt.xlim( xmin=0, xmax = 200)
             # plt.legend(loc='upper right')
             plt.xlabel('Dateiname:\n'+columnName)
             plt.grid()
@@ -130,7 +127,7 @@ if __name__ == "__main__":
 
             # Autokorrelation: Verstärkung des Signals?
             autocorr = signal.convolve(y,y)
-            plt.plot(autocorr)
+            #plt.plot(autocorr)
             plt.show()
             break
 
