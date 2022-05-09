@@ -5,13 +5,12 @@ Created on Mon Apr 25 13:47:33 2022
 @author: Alexander
 """
 
-#Bibliotheken
-import numpy as np 
-import pandas as pd 
 import matplotlib.pyplot as plt
-
+# Bibliotheken
+import numpy as np
+import pandas as pd
 from scipy.io import wavfile
-#from scipy import signal as sig
+# from scipy import signal as sig
 from scipy.signal import butter
 from scipy.signal import sosfilt
 
@@ -52,6 +51,7 @@ plt.show()
 
 wn = 500 
 sos = butter(10, wn, 'hp', fs=samplerate, output='sos')
+#scipy.signal.cheby1()
 filtered = sosfilt(sos, signal)
 
 #plot gefiltertes Signal gesamt

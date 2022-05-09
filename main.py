@@ -106,12 +106,14 @@ if __name__ == "__main__":
             # xf = fft.fftfreq(yf)
             # Number of sample points
 
-            N = 48000
+            N = 96000
             nyquist_shannon = 2
             # sample spacing
             T = 1.0 / N / nyquist_shannon
-            print(T)
-            x = np.linspace(start=0.0, stop=20e3, num=N, endpoint=False)
+
+            #print(T)
+
+            x = np.linspace(start=0.0, stop=2, num=N, endpoint=False)
             y = columnData.to_numpy()
             yf = fft(y)
             print(yf)
@@ -121,16 +123,18 @@ if __name__ == "__main__":
             plt.plot(xf, 2.0 / N * np.abs(yf[0:N // 2]))
             plt.xlim(xmax=4e3, xmin=0)
             # plt.legend(loc='upper right')
-            plt.xlabel(columnName)
+            plt.xlabel('Dateiname:\n'+columnName)
             plt.grid()
-
             plt.show()
+
 
             # Autokorrelation: Verstärkung des Signals?
             autocorr = signal.convolve(y,y)
             plt.plot(autocorr)
             plt.show()
             break
+
+
 
 '''
 FFT ist nun also die Summe aller sinus Funktionen normalisiert auf die Menge aller Datenpunkte N. 
