@@ -1,5 +1,6 @@
 # @Author Mirko Matosin
 # @Date 14.02.2022
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -82,34 +83,20 @@ def mov_avg(data_filtered, do_plot=False):
         plt.show()
 
 
-def buttern(data, filename, doplot=False, samplerate=48000, omega=500):
+def buttern(data, timevec,filename='N/A', doplot=False, samplerate=48000, omega=500):
     ''' Butterworth-Hochpassfilter
         wn = 150 rad/s bestes Ergebnis für Signal
         wn = 500 rad/s bestes Ergebnis für Rauschen '''
 
     wn = omega
-    t = np.linspace(0.0, 2.0, num=data.shape[0])
     # warum braucht es eine so große Ordnung?
     sos = butter(10, wn, btype='hp', fs=samplerate, output='sos')
-
     filtered = sosfilt(sos, data)
 
     if doplot:
         # plot gefiltertes Signal gesamt
         plt.figure()
-        plt.plot(t, filtered)
-        plt.grid(True)
-        plt.xlabel('Zeit in s')
-        plt.ylabel('Amplitude')
-        plt.title('HP gefiltert mit wn = %i' % wn)
-        plt.show()
-
-        # plot Ticken
-        plt.figure()
-        # xmin, xmax, ymin, ymax = 1.2, 1.3, -0.003, 0.003
-        # plt.axis([xmin, xmax, ymin, ymax])
-        plt.xlim(1.2, 1.3)
-        plt.plot(t, filtered)
+        plt.plot(timevec, filtered)
         plt.grid(True)
         plt.xlabel('Zeit in s')
         plt.ylabel('Amplitude')
@@ -119,7 +106,8 @@ def buttern(data, filename, doplot=False, samplerate=48000, omega=500):
     return filtered
 
 
-def plotSounds(data, filename, samplerate=48000, xlab='Time [s]', ylab='Amplitude', title='Ticken im Original'):
+def plotSounds(ax,data, abszisse, filename='N/A',samplerate=48000, log=True,
+               xlab='Time [s]', ylab='Amplitude', title='Ticken im Original'):
     """
     Plottet eine Spalte oder ein Vektor in Timedomain
 
@@ -130,20 +118,24 @@ def plotSounds(data, filename, samplerate=48000, xlab='Time [s]', ylab='Amplitud
     :param ylab: Label auf Ordinate
     :return:
     """
-    length = data.shape[0] / samplerate
-    time = np.linspace(0., length, data.shape[0])
 
-    plt.plot(time, data, label=filename)
+
+    time_axis = abszisse
+    plt.plot(time_axis, data, label=filename)
     plt.legend(loc='upper right')
     plt.grid(True)
     plt.xscale('linear')
-    plt.yscale('log')
+    if log:
+        plt.yscale('log')
+    else:
+        plt.yscale('linear')
     # plt.xlim(xmax=1.31, xmin=1)
     plt.xlabel(xlab)
     plt.ylabel(ylab)
     plt.title(title)
     plt.show()
-
+    out = ax
+    return out
 
 def getWavFromFolder(wavdir):
     """
@@ -172,6 +164,7 @@ if __name__ == "__main__":
     audio_dir = (r'rohdaten/')  # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
     files, df = getWavFromFolder(wavdir=audio_dir)  # ich mag explizite Programmierung. Also wavdir=...,
     # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
+    samplerate = 48000
 
     # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
     for (columnName, columnData) in df.iteritems():
@@ -179,60 +172,27 @@ if __name__ == "__main__":
             continue
         else:
             # plotSounds(data=columnData, filename=columnName)
-            buttern(data=columnData, filename=columnName, doplot=True, omega=400)
+
+            length = columnData.shape[0] / samplerate
+            time = np.linspace(0., length, columnData.shape[0])
+            omega_butter = 400
+            fig1, axs = plt.subplots(2, 1)#, sharex=True)
+            ax1,ax2 = axs
+            plotSounds(data=columnData, filename=columnName, abszisse=time,
+                       figurehandle=fig1)
+            plotSounds(data=columnData, filename=columnName, abszisse=time,
+                       figurehandle = fig1, log=False)
+
+
+            filtered = buttern(data=columnData, filename=columnName,timevec=time, omega=omega_butter)
+            fig3, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+            plotSounds(data=filtered, filename=columnName, abszisse=time,
+                       title='Gebuttert mit $\omega$= %i'%omega_butter,
+                       figurehandle = fig3, log=False)
+
+
+
 
             break
 
-
-
-'''
-@Source
-https://stackoverflow.com/questions/2060628/reading-wav-files-in-python
-https://www.programcreek.com/python/example/93227/scipy.io.wavfile.read
-https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.wavfile.read.html
-https://klyshko.github.io/teaching/2019-02-22-teaching
-
-Digital sound
-
-When you hear a sound your ear’s membrane oscillates because the density and pressure of the air in close proximity 
-to the ear oscillate as well. Thus, sound recordings contain the relative signal of these oscilations. Digital audio is 
-sound that has been recorded in, or converted into, digital form. In digital audio, the sound wave of the audio signal 
-is encoded as numerical samples in continuous sequence. For example, in CD (or WAV) audio, samples are taken 44100 times 
-per second each with 16 bit sample depth, i.e. there are 2^16 = 65536 possible values of the signal: from -32768 to 32767. 
-For the example below, a sound wave, in red, represented digitally, in blue (after sampling and 4-bit quantization).
-2f/2s Signal    ?????
-
-To Read:
-https://dewesoft.com/daq/guide-to-fft-analysis
-
-app.diagrams.net
-
-FFT ist nun also die Summe aller sinus Funktionen normalisiert auf die Menge aller Datenpunkte N. 
-
-$A(f_k) = \frac{1}{N} \sum_{n=0}^{N-1} a(t_n) e^{-i \frac{2 \pi kn}{N}}$
-
-
-Das Ziel ist nun die wesentlichen Signalanteile in der Wav zu finden. Dies erfordert das Nutzen der FFT. Die FFT 
-wird das Signal in seine spektralen Bestandteile zerlegen. 
-
-Nullhypothese:
-Hypothese ist das ein lautes Grundrauschen bis ca. 800 Hz enthalten ist. Das Ticken nach unten (0-30s) selbst sollte im 
-Frequenzbereich um 1k Hz liegen. Dies können wir nutzen um das Ticken zu isolieren und zu verstärken
-
-Alternativhypothese: 
-Es gibt keinen Unterschied von hoch/runter.. Die Eigenschwingung \omega_E,R ist stets konstant.
-
-Vorgehen:
-Der erste Schritt besteht darin, die Eingangszeitdaten in FFT-Zeitblöcke zu zerlegen. Die Eingangszeitdaten können rohe 
-Sensorsignale oder vorverarbeitete (z. B. gefilterte) Signale sein. Jeder Zeitblock hat eine Zeitdauer T, die sich auf 
-die spektrale Auflösung der erzeugten Spektren bezieht. Die Zeitblöcke können so konfiguriert werden, dass eine 
-Fensterfunktion angewandt wird und ein Überlappungssatz entsteht. 
-Anschließend werden die FFT-Zeitblöcke mit Hilfe des FFT-Algorithmus vom Zeitbereich in den Frequenzbereich transformiert. 
-Jeder Zeitblock ergibt ein momentanes komplexes FFT-Spektrum. 
-Die momentanen komplexen FFT-Spektren werden zur Berechnung der momentanen Leistungsspektren verwendet. Die Leistungsspektren 
-werden über eine bestimmte Anzahl von Spektren oder eine bestimmte Zeitdauer gemittelt. Leistungsspektren haben reelle 
-Werte und beziehen sich auf ein Eingangssignal. Kreuzleistungsspektren haben komplexe Werte und beziehen sich auf zwei 
-Eingangssignale.
-
-
-'''
+    print('bye world')
