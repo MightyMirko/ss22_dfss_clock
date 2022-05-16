@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 
 plt.rcParams['figure.dpi'] = 150
-# plt.rcParams['figure.figsize'] = (12, 7)
+#plt.rcParams['interactive'] = True
+plt.rcParams['figure.figsize'] = (12, 7)
 from scipy.io import wavfile
 from os.path import join as pjoin
 from os import listdir
@@ -83,7 +84,7 @@ def mov_avg(data_filtered, do_plot=False):
         plt.show()
 
 
-def buttern(data, timevec,filename='N/A', doplot=False, samplerate=48000, omega=500):
+def buttern(data, timevec, filename='N/A', doplot=False, samplerate=48000, omega=500):
     ''' Butterworth-Hochpassfilter
         wn = 150 rad/s bestes Ergebnis für Signal
         wn = 500 rad/s bestes Ergebnis für Rauschen '''
@@ -106,7 +107,7 @@ def buttern(data, timevec,filename='N/A', doplot=False, samplerate=48000, omega=
     return filtered
 
 
-def plotSounds(ax,data, abszisse, filename='N/A',samplerate=48000, log=True,
+def plotSounds(ax, data, abszisse, param_dict={},filename='N/A',samplerate=48000, log=True,
                xlab='Time [s]', ylab='Amplitude', title='Ticken im Original'):
     """
     Plottet eine Spalte oder ein Vektor in Timedomain
@@ -118,23 +119,19 @@ def plotSounds(ax,data, abszisse, filename='N/A',samplerate=48000, log=True,
     :param ylab: Label auf Ordinate
     :return:
     """
-
-
     time_axis = abszisse
-    plt.plot(time_axis, data, label=filename)
-    plt.legend(loc='upper right')
-    plt.grid(True)
-    plt.xscale('linear')
+    out = ax.plot(time_axis, data, label=filename, **param_dict)
+    ax.legend(loc='upper right')
+    ax.grid(True)
+    ax.set_xscale('linear')
     if log:
-        plt.yscale('log')
+        ax.set_yscale('log')
     else:
-        plt.yscale('linear')
+        ax.set_yscale('linear')
     # plt.xlim(xmax=1.31, xmin=1)
-    plt.xlabel(xlab)
-    plt.ylabel(ylab)
-    plt.title(title)
-    plt.show()
-    out = ax
+    ax.set_xlabel(xlab)
+    ax.set_ylabel(ylab)
+    ax.set_title(title)
     return out
 
 def getWavFromFolder(wavdir):
@@ -176,23 +173,26 @@ if __name__ == "__main__":
             length = columnData.shape[0] / samplerate
             time = np.linspace(0., length, columnData.shape[0])
             omega_butter = 400
-            fig1, axs = plt.subplots(2, 1)#, sharex=True)
-            ax1,ax2 = axs
-            plotSounds(data=columnData, filename=columnName, abszisse=time,
-                       figurehandle=fig1)
-            plotSounds(data=columnData, filename=columnName, abszisse=time,
-                       figurehandle = fig1, log=False)
+            fig1, axs = plt.subplots(3, 1, figsize=(12,8))#, sharex=True)
+            ax1,ax2,ax3 = axs
+            filtered = buttern(data=columnData, filename=columnName,timevec=time,
+                               omega=omega_butter)
 
+            # Logaritmische Darstellung
+            plotSounds(ax1, data=columnData, filename=columnName, abszisse=time,
+                       log=True, ylab='Amplitude in dB')
 
-            filtered = buttern(data=columnData, filename=columnName,timevec=time, omega=omega_butter)
-            fig3, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-            plotSounds(data=filtered, filename=columnName, abszisse=time,
-                       title='Gebuttert mit $\omega$= %i'%omega_butter,
-                       figurehandle = fig3, log=False)
+            plotSounds(ax2, data=columnData, filename=columnName, abszisse=time,
+                       log=False, title='')
 
+            plotSounds(ax3, data=filtered, filename=columnName, abszisse=time,
+                       title='Gebuttert mit $\omega$= %i'%omega_butter, log=False   )
 
-
-
+            fig1.show()
+            plt.subplot_tool(fig1)
             break
 
     print('bye world')
+    plt.clf()
+
+    plt.close()
