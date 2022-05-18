@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 plt.rcParams['figure.dpi'] = 150
-#plt.rcParams['interactive'] = True
+# plt.rcParams['interactive'] = True
 plt.rcParams['figure.figsize'] = (12, 7)
 from scipy.io import wavfile
 from os.path import join as pjoin
@@ -16,33 +16,34 @@ from scipy.signal import butter
 from scipy.signal import sosfilt
 
 
-def fft_test():
-    sample_rate = 600
-    signal_length = 2
+def fft_test(data, timevec, sample_rate = 48000, fourier_abtastzeit=1e-3, do_plot=False):
+    signal_length = len(timevec)
     # sample spacing
-    abtastzeit = 1.0 / (9 * sample_rate)
-
-    #            x = np.linspace(0.0, sample_rate * abtastzeit, sample_rate, endpoint=False)
-    #           y = np.sin(50.0 * 2.0 * np.pi * x) + 0.5 * np.sin(80.0 * 2.0 * np.pi * x)
-
     x = np.linspace(start=0.0, stop=2, num=signal_length * sample_rate, endpoint=False)
     y = columnData.to_numpy()
+
     yf = fft(y)
-    xf = fftfreq(sample_rate, abtastzeit)[:sample_rate // 2]
+    xf = fftfreq(sample_rate, fourier_abtastzeit)[:sample_rate // 2]
+    print(xf)
 
     apfel = np.abs(yf[0:sample_rate // 2])
-    print(apfel)
-    plt.plot(xf, 2.0 / sample_rate * np.abs(yf[0:sample_rate // 2]))
-    plt.xlim(xmin=0, xmax=200)
-    # plt.legend(loc='upper right')
-    plt.xlabel('Dateiname:\n' + columnName)
-    plt.grid()
-    plt.show()
+    # Normalisierung?
+    normale = (2.0 / sample_rate * apfel)
+    if do_plot:
+        plt.plot(xf, normale )
+        plt.xlim(xmin=0, xmax=2e4)
+        # plt.legend(loc='upper right')
+        plt.xlabel('Dateiname:\n' + columnName)
+        plt.grid()
+        plt.show()
+
+    out = [yf,xf]
+    return out
 
     # Autokorrelation: Verstärkung des Signals?
-    #autocorr = signal.convolve(y, y)
+    # autocorr = signal.convolve(y, y)
     # plt.plot(autocorr)
-    #plt.show()
+    # plt.show()
 
 
 def mov_avg(data_filtered, timevec, do_plot=False):
@@ -86,6 +87,7 @@ def mov_avg(data_filtered, timevec, do_plot=False):
 
     return moving_averages
 
+
 def buttern(data, timevec, filename='N/A', doplot=False, samplerate=48000, omega=500):
     ''' Butterworth-Hochpassfilter
         wn = 150 rad/s bestes Ergebnis für Signal
@@ -109,7 +111,7 @@ def buttern(data, timevec, filename='N/A', doplot=False, samplerate=48000, omega
     return filtered
 
 
-def plotSounds(ax, data, abszisse, param_dict={},filename='N/A',samplerate=48000, log=True,
+def plotSounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=48000, log=True,
                xlab='Time [s]', ylab='Amplitude', title='Ticken im Original'):
     """
     Plottet eine Spalte oder ein Vektor in Timedomain
@@ -135,6 +137,7 @@ def plotSounds(ax, data, abszisse, param_dict={},filename='N/A',samplerate=48000
     ax.set_ylabel(ylab)
     ax.set_title(title)
     return out
+
 
 def getWavFromFolder(wavdir):
     """
@@ -171,13 +174,13 @@ if __name__ == "__main__":
             continue
         else:
             # plotSounds(data=columnData, filename=columnName)
-
+            print(columnData.max())
             # Anlegen der Variablen
             length = columnData.shape[0] / samplerate
             time = np.linspace(0., length, columnData.shape[0])
             omega_butter = 400
             # Erst mal buttern mit Original dan filtern mit original
-            filtered = buttern(data=columnData, filename=columnName,timevec=time,
+            filtered = buttern(data=columnData, filename=columnName, timevec=time,
                                omega=omega_butter)
 
             # Plot der Original Datei
@@ -186,36 +189,33 @@ if __name__ == "__main__":
 
             # Logaritmische Darstellung
             plotSounds(ax1, data=columnData, filename=columnName, abszisse=time,
-                       log=True,title='Original', ylab='Amplitude in dB')
+                       log=True, title='Original', ylab='Amplitude in dB')
 
             plotSounds(ax2, data=columnData, filename=columnName, abszisse=time,
                        log=False, title='')
             fig2, axs = plt.subplots(2, 1, figsize=(12, 8))
 
             plotSounds(axs[0], data=filtered, filename=columnName, abszisse=time,
-                       title='Gebuttert mit $\omega$= %i'%omega_butter, log=False)
-
-
-
+                       title='Gebuttert mit $\omega$= %i' % omega_butter, log=False)
 
             moved_average_data = mov_avg(data_filtered=columnData, timevec=time, do_plot=False)
             moved_average_data = moved_average_data.values
 
             plotSounds(axs[1], data=moved_average_data, filename=columnName, abszisse=time[0:95996],
-                       title='Moving AVG', log=False )
+                       title='Moving AVG', log=False)
 
             # Buttern, dann filtern
             fig1.show()
             fig2.show()
 
-            fig3, axs = plt.subplots(2,1, figsize=(12,8))
+            fig3, axs = plt.subplots(2, 1, figsize=(12, 8))
 
             moved_average_data = mov_avg(data_filtered=columnData, timevec=time, do_plot=False)
             moved_average_data = moved_average_data.values
-            filtered = buttern(data=moved_average_data, filename=columnName,timevec=time,
+            filtered = buttern(data=moved_average_data, filename=columnName, timevec=time,
                                omega=omega_butter)
             plotSounds(axs[0], data=filtered, filename=columnName, abszisse=time[0:95996],
-                       title='Gebuttert mit $\omega$= %i'%omega_butter, log=False)
+                       title='Gebuttert mit $\omega$= %i' % omega_butter, log=False)
 
             plotSounds(axs[1], data=moved_average_data, filename=columnName, abszisse=time[0:95996],
                        title='Moving AVG', log=False)
@@ -225,11 +225,8 @@ if __name__ == "__main__":
             plt.close(fig2)
             plt.close(fig1)
 
-
-
-
-
-
+            fig4, axs = plt.subplots(2, 1, figsize=(12, 8))
+            fft_test(data=columnData, timevec=time,fourier_abtastzeit=1/10/48e3, do_plot=True)
 
             break
 
