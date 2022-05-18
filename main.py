@@ -45,22 +45,23 @@ def fft_test():
     #plt.show()
 
 
-def mov_avg(data_filtered, do_plot=False):
+def mov_avg(data_filtered, timevec, do_plot=False):
     ''' Moving Average-Filter
         Achtung!!! Anzahl an Sampels wird um k-1 verringert '''
-    filtered = data_filtered
-    t = np.linspace(0.0, 2.0, num=96000)
+
+    t = timevec
 
     # Fenstergröße k festlegen (nur ungerade k erlaubt!!!)
     window_size = 5
-    # übergabe des Signals und convertierung in pandas Series
-    numbers_series = pd.Series(filtered)
+    # übergabe des Signals und Konvertierung in pandas Series
+    numbers_series = pd.Series(data_filtered)
     # Auschneidern der Beobachtungsreihe entsprechend der Fenstergröße
     windows = numbers_series.rolling(window_size)
     # Mittelwert jedes Ausschnittes bilden
     moving_averages = windows.mean()
     # NaN entfernen
     moving_averages = moving_averages[window_size - 1:]
+
     if do_plot:
         # plot gefiltertes Signal gesamt
         plt.figure()
@@ -83,6 +84,7 @@ def mov_avg(data_filtered, do_plot=False):
         plt.title('Moving Average gefiltert')
         plt.show()
 
+    return moving_averages
 
 def buttern(data, timevec, filename='N/A', doplot=False, samplerate=48000, omega=500):
     ''' Butterworth-Hochpassfilter
@@ -162,7 +164,7 @@ if __name__ == "__main__":
     files, df = getWavFromFolder(wavdir=audio_dir)  # ich mag explizite Programmierung. Also wavdir=...,
     # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
     samplerate = 48000
-
+    plt.clf()
     # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
     for (columnName, columnData) in df.iteritems():
         if not '26' in columnName:
@@ -170,26 +172,65 @@ if __name__ == "__main__":
         else:
             # plotSounds(data=columnData, filename=columnName)
 
+            # Anlegen der Variablen
             length = columnData.shape[0] / samplerate
             time = np.linspace(0., length, columnData.shape[0])
             omega_butter = 400
-            fig1, axs = plt.subplots(3, 1, figsize=(12,8))#, sharex=True)
-            ax1,ax2,ax3 = axs
+            # Erst mal buttern mit Original dan filtern mit original
             filtered = buttern(data=columnData, filename=columnName,timevec=time,
                                omega=omega_butter)
 
+            # Plot der Original Datei
+            fig1, axs = plt.subplots(2, 1, figsize=(12, 8))  # , sharex=True)
+            ax1, ax2 = axs
+
             # Logaritmische Darstellung
             plotSounds(ax1, data=columnData, filename=columnName, abszisse=time,
-                       log=True, ylab='Amplitude in dB')
+                       log=True,title='Original', ylab='Amplitude in dB')
 
             plotSounds(ax2, data=columnData, filename=columnName, abszisse=time,
                        log=False, title='')
+            fig2, axs = plt.subplots(2, 1, figsize=(12, 8))
 
-            plotSounds(ax3, data=filtered, filename=columnName, abszisse=time,
-                       title='Gebuttert mit $\omega$= %i'%omega_butter, log=False   )
+            plotSounds(axs[0], data=filtered, filename=columnName, abszisse=time,
+                       title='Gebuttert mit $\omega$= %i'%omega_butter, log=False)
 
+
+
+
+            moved_average_data = mov_avg(data_filtered=columnData, timevec=time, do_plot=False)
+            moved_average_data = moved_average_data.values
+
+            plotSounds(axs[1], data=moved_average_data, filename=columnName, abszisse=time[0:95996],
+                       title='Moving AVG', log=False )
+
+            # Buttern, dann filtern
             fig1.show()
-            plt.subplot_tool(fig1)
+            fig2.show()
+
+            fig3, axs = plt.subplots(2,1, figsize=(12,8))
+
+            moved_average_data = mov_avg(data_filtered=columnData, timevec=time, do_plot=False)
+            moved_average_data = moved_average_data.values
+            filtered = buttern(data=moved_average_data, filename=columnName,timevec=time,
+                               omega=omega_butter)
+            plotSounds(axs[0], data=filtered, filename=columnName, abszisse=time[0:95996],
+                       title='Gebuttert mit $\omega$= %i'%omega_butter, log=False)
+
+            plotSounds(axs[1], data=moved_average_data, filename=columnName, abszisse=time[0:95996],
+                       title='Moving AVG', log=False)
+
+            fig3.show()
+            plt.close(fig3)
+            plt.close(fig2)
+            plt.close(fig1)
+
+
+
+
+
+
+
             break
 
     print('bye world')
