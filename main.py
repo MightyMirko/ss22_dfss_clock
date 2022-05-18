@@ -16,34 +16,39 @@ from scipy.signal import butter
 from scipy.signal import sosfilt
 
 
-def fft_test(data, timevec, sample_rate = 48000, fourier_abtastzeit=1e-3, do_plot=False):
-    signal_length = len(timevec)
+def fft_test(ax2d, data, sample_rate=48000, fourier_abtastzeit=0.1, do_plot=False, filename='test'):
+    signal_length = 2
     # sample spacing
     x = np.linspace(start=0.0, stop=2, num=signal_length * sample_rate, endpoint=False)
-    y = columnData.to_numpy()
+    y = data.to_numpy()
 
     yf = fft(y)
+    fourier_abtastzeit  = 1 / 10 / 48000
     xf = fftfreq(sample_rate, fourier_abtastzeit)[:sample_rate // 2]
     print(xf)
 
-    apfel = np.abs(yf[0:sample_rate // 2])
-    # Normalisierung?
-    normale = (2.0 / sample_rate * apfel)
+    out = ''
     if do_plot:
-        plt.plot(xf, normale )
-        plt.xlim(xmin=0, xmax=2e4)
+        ax  = ax2d[0]
+        ax1 = ax2d[1]
+        apfel = np.abs(yf[0:sample_rate // 2])
+        # Normalisierung?
+        normale = (2.0 / sample_rate * apfel)
+        out = ax.plot(xf, normale)
         # plt.legend(loc='upper right')
-        plt.xlabel('Dateiname:\n' + columnName)
-        plt.grid()
-        plt.show()
+        ax.set_xlabel('Dateiname:\n' + filename)
+        ax.set_xlim(left=0, right=1e4)
+        ax.grid()
 
-    out = [yf,xf]
-    return out
+        out = ax1.plot(xf, normale)
+        # plt.legend(loc='upper right')
+        ax1.set_xlabel('Dateiname:\n' + filename)
+        ax1.set_xlim(left=0, right=1e4)
+        ax1.set_yscale('log')
+        ax1.grid()
 
-    # Autokorrelation: Verstärkung des Signals?
-    # autocorr = signal.convolve(y, y)
-    # plt.plot(autocorr)
-    # plt.show()
+    fourier = [yf, xf]
+    return fourier, out
 
 
 def mov_avg(data_filtered, timevec, do_plot=False):
@@ -123,8 +128,7 @@ def plotSounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=480
     :param ylab: Label auf Ordinate
     :return:
     """
-    time_axis = abszisse
-    out = ax.plot(time_axis, data, label=filename, **param_dict)
+    out = ax.plot(abszisse, data, label=filename, **param_dict)
     ax.legend(loc='upper right')
     ax.grid(True)
     ax.set_xscale('linear')
@@ -226,8 +230,11 @@ if __name__ == "__main__":
             plt.close(fig1)
 
             fig4, axs = plt.subplots(2, 1, figsize=(12, 8))
-            fft_test(data=columnData, timevec=time,fourier_abtastzeit=1/10/48e3, do_plot=True)
+            fft = fft_test( ax2d=axs, data=columnData, do_plot=True)
+            print(fft[0])
 
+            fig4.show()
+            plt.close(fig4)
             break
 
     print('bye world')
