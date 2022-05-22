@@ -34,7 +34,7 @@ plt.show()
 
 #%%
 
-from scipy.signal import blackman
+import scipy.signal as signal
 
 # Number of sample points
 N = 96000
@@ -44,7 +44,7 @@ T = 1 / 48000
 
 x = np.linspace(0, N*T, N)#, endpoint=False)
 y = np.sin(50*2*np.pi*x) + 0.5*np.sin(80*2*np.pi*x)
-w = blackman(N)
+w = signal.blackman(N)
 
 xf = fftfreq(N, T)[:N//2]
 yf = fft(y)[:N//2]

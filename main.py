@@ -52,15 +52,15 @@ def fft_test(ax2d, data, sample_rate=48000, do_plot=False, filename='test'):
     :param filename: Aktueller Dateiname
     :return: Fourierdaten und das Matplotlibhandle zur weiteren Kontrolle der Plots.
     '''
-    signal_length = 2
+    signal_length = data.shape[0]/sample_rate
+    num = signal_length * float(sample_rate)
     # sample spacing
-    x = np.linspace(start=0.0, stop=2, num=signal_length * sample_rate, endpoint=False)
+    x = np.linspace(start=0.0, stop=signal_length, num=int(signal_length * sample_rate), endpoint=False)
     y = data.to_numpy()
 
     yf = fft(y)
-    fourier_abtastzeit = 1 / 10 / 48000
+    fourier_abtastzeit = 1  / sample_rate
     xf = fftfreq(sample_rate, fourier_abtastzeit)[:sample_rate // 2]
-    print(xf)
 
     out = ''
     if do_plot:
@@ -194,7 +194,7 @@ def plotSounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=480
     return out
 
 
-def getWavFromFolder(wavdir):
+def getWavFromFolder(wavdir, do_test=False):
     """
     Sucht alle Wavdateien in einem Ordner und speichert die Rohdaten in einem gemeinsamenem Objekt
     :param wavdir: Pfad wo die wav daten liegen
@@ -206,31 +206,44 @@ def getWavFromFolder(wavdir):
     for file in listdir(wavdir):
         if file.endswith(".wav"):
             filename = file.strip(".wav")
-            pfad = pjoin(wavdir, file)
-            wavfiles.append(pfad)
-            filenames.append(filename)
-            samplerate, data = wavfile.read(filename=pfad)
-            df[filename] = data
+            if do_test and not 'test' in filename:
+                continue
+            else:
+                pfad = pjoin(wavdir, file)
+                wavfiles.append(pfad)
+                filenames.append(filename)
+                samplerate, data = wavfile.read(filename=pfad)
+                df[filename] = data
+                break
     return wavfiles, df
+
+
+from playsound import playsound
+from multiprocessing import Process
 
 
 if __name__ == "__main__":
     #
     print('hello World')
-    do_plot = False
+    do_plot = True
     do_test_mode = True
 
     audio_dir = (r'rohdaten/')  # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
-    files, df = getWavFromFolder(wavdir=audio_dir)  # ich mag explizite Programmierung. Also wavdir=...,
+    files, df = getWavFromFolder(wavdir=audio_dir, do_test=do_test_mode)  # ich mag explizite Programmierung. Also wavdir=...,
     # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
     samplerate = 48000
     plt.clf()
 
     # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
     for (columnName, columnData) in df.iteritems():
-        if do_test_mode and not '26' in columnName:
+        if do_test_mode and not 'test' in columnName:
             continue
         else:
+
+            p = Process(target=playsound, args=([audio_dir + 'a'+columnName + '.wav'])
+                        )
+            p.start()
+
             # plotSounds(data=columnData, filename=columnName)
             print(columnData.max())
             # Anlegen der Variablen
@@ -259,13 +272,9 @@ if __name__ == "__main__":
 
             moved_average_data = mov_avg(data_filtered=columnData, timevec=time, do_plot=False)
             moved_average_data = moved_average_data.values
-
-            plotSounds(axs[1], data=moved_average_data, filename=columnName, abszisse=time[0:95996],
+            tmp_time = columnData.shape[0] - 4
+            plotSounds(axs[1], data=moved_average_data, filename=columnName, abszisse=time[0:tmp_time],
                        title='Moving AVG', log=False)
-
-            # Buttern, dann filtern
-            fig1.tight_layout()
-            fig2.tight_layout()
 
             fig3, axs = plt.subplots(2, 1, figsize=(12, 8))
 
@@ -273,25 +282,29 @@ if __name__ == "__main__":
             moved_average_data = moved_average_data.values
             filtered = buttern(data=moved_average_data, filename=columnName, timevec=time,
                                omega=omega_butter)
-            plotSounds(axs[0], data=filtered, filename=columnName, abszisse=time[0:95996],
+
+
+            plotSounds(axs[0], data=filtered, filename=columnName, abszisse=time[0:tmp_time],
                        title='Gebuttert mit $\omega$= %i' % omega_butter, log=False)
 
-            plotSounds(axs[1], data=moved_average_data, filename=columnName, abszisse=time[0:95996],
+            plotSounds(axs[1], data=moved_average_data, filename=columnName,abszisse=time[0:tmp_time],
                        title='Moving AVG', log=False)
 
-            fig3.tight_layout()
             # fig3.show()
 
             fig4, axs = plt.subplots(2, 1, figsize=(12, 8))
-            fft = fft_test(ax2d=axs, data=columnData, do_plot=True)
-            print(fft[0])
+            fft = fft_test(ax2d=axs, data=columnData, do_plot=True, filename=columnName)
+            # print(fft[0])
 
             if do_plot:
+                fig1.tight_layout()
+                fig2.tight_layout()
+                fig3.tight_layout()
                 fig4.tight_layout()
-                fig3.show()
-                fig4.show()
                 fig1.show()
                 fig2.show()
+                fig3.show()
+                fig4.show()
                 plt.close(fig4)
                 plt.close(fig3)
                 plt.close(fig2)
@@ -299,6 +312,7 @@ if __name__ == "__main__":
             else:
                 print('Keine Plots erwünscht')
             break
+            p.join()
 
     print('bye world')
     plt.clf()

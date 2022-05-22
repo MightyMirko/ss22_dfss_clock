@@ -38,7 +38,7 @@ t = np.linspace(0, 0.2, 1000, False)  # 1 second
 
 sig = np.sin(2*np.pi*50*t) + np.sin(2*np.pi*300*t)
 
-fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+fig, (ax1, ax2) = plt.subplots(2, 1, sharex='all')
 
 ax1.plot(t, sig)
 
