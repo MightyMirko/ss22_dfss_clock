@@ -56,7 +56,10 @@ def fft_test(ax2d, data, sample_rate=48000, do_plot=False, filename='test'):
     num = signal_length * float(sample_rate)
     # sample spacing
     x = np.linspace(start=0.0, stop=signal_length, num=int(signal_length * sample_rate), endpoint=False)
-    y = data.to_numpy()
+    if not 'ndarray' in type(data):
+        y = data.to_numpy()
+    else:
+        print(type(data))
 
     yf = fft(y)
     fourier_abtastzeit = 1  / sample_rate
@@ -205,7 +208,8 @@ def getWavFromFolder(wavdir, do_test=False):
     df = pd.DataFrame()
     for file in listdir(wavdir):
         if file.endswith(".wav"):
-            filename = file.strip(".wav")
+            import re
+            filename  = re.sub(r'.wav$', '', file)
             if do_test and not 'test' in filename:
                 continue
             else:
@@ -223,10 +227,11 @@ from multiprocessing import Process
 
 
 if __name__ == "__main__":
-    #
+
     print('hello World')
     do_plot = True
     do_test_mode = True
+    do_play = False
 
     audio_dir = (r'rohdaten/')  # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
     files, df = getWavFromFolder(wavdir=audio_dir, do_test=do_test_mode)  # ich mag explizite Programmierung. Also wavdir=...,
@@ -238,10 +243,8 @@ if __name__ == "__main__":
     for (columnName, columnData) in df.iteritems():
         if do_test_mode and not 'test' in columnName:
             continue
-        else:
-
-            p = Process(target=playsound, args=([audio_dir + 'a'+columnName + '.wav'])
-                        )
+        if do_play:
+            p = Process(target=playsound, args=([audio_dir + 'a'+columnName + '.wav'])                        )
             p.start()
 
             # plotSounds(data=columnData, filename=columnName)
@@ -294,6 +297,9 @@ if __name__ == "__main__":
 
             fig4, axs = plt.subplots(2, 1, figsize=(12, 8))
             fft = fft_test(ax2d=axs, data=columnData, do_plot=True, filename=columnName)
+            fig5, axs = plt.subplots(2, 1, figsize=(12, 8))
+
+            fft_butter = fft_test(ax2d=axs, data=filtered, do_plot=True, filename=columnName)
             # print(fft[0])
 
             if do_plot:
@@ -312,7 +318,8 @@ if __name__ == "__main__":
             else:
                 print('Keine Plots erwünscht')
             break
-            p.join()
+            if do_play:
+                p.join()
 
     print('bye world')
     plt.clf()
