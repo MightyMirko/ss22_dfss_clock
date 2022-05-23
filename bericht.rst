@@ -55,3 +55,4 @@ Ein kontinuierliches Tiefpass-Signal muss mit einer Frequenz abgetastet werden, 
 Insbesondere bei Zufallssignalen lässt sich das Spektrum nicht exakt messen, man spricht deshalb oft von einer Schätzung des Spektrums und nicht von einer Messung.
 
 
+ Die Anzahl der Datenpunkte (k), die Sie vor- und zurückgehen lassen, ist der springende Punkt eines Filters zur Mittelwertglättung. Dies wird als die Ordnung des Filters bezeichnet.

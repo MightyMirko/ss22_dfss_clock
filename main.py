@@ -7,7 +7,7 @@ import pandas as pd
 
 plt.rcParams['figure.dpi'] = 150
 # plt.rcParams['interactive'] = True
-plt.rcParams['figure.figsize'] = (12, 7)
+plt.rcParams['figure.figsize'] = (21, 9)
 from scipy.io import wavfile
 from os.path import join as pjoin
 from os import listdir
@@ -49,13 +49,13 @@ def fft_test(ax2d, data, sample_rate=48000, do_plot=False, filename='test'):
     :param data: Die Daten für die FFT
     :param sample_rate: Standard ist 48kHz - kann geändert werden (ungetestet)
     :param do_plot: Wenn die Funktion gleich auch plotten soll? Achtung: Rechner stürzt bei vielen Figures ab
-    :param filename: Aktueller Dateiname
+    :param filename: Aktueller Dateiname und somit titel
     :return: Fourierdaten und das Matplotlibhandle zur weiteren Kontrolle der Plots.
     '''
     signal_length = data.shape[0] / sample_rate
-    num = signal_length * float(sample_rate)
+    # num = signal_length * float(sample_rate*1)
     # sample spacing
-    x = np.linspace(start=0.0, stop=signal_length, num=int(signal_length * sample_rate), endpoint=False)
+    #x = np.linspace(start=0.0, stop=signal_length, num=int(num), endpoint=False)
     try:
         y = data.to_numpy()
     except AttributeError:
@@ -65,26 +65,31 @@ def fft_test(ax2d, data, sample_rate=48000, do_plot=False, filename='test'):
 
     yf = fft(y)
     fourier_abtastzeit = 1 / sample_rate
-    xf = fftfreq(sample_rate, fourier_abtastzeit)[:sample_rate // 2]
+    xf = fftfreq(sample_rate, fourier_abtastzeit)
+    # beidseitige fft wird nicht notwendig sein. lieber nur positive
+    xf = xf[:sample_rate // 2]
+    # scope definition.
 
     out = ''
     if do_plot:
         ax = ax2d[0]
         ax1 = ax2d[1]
-        apfel = np.abs(yf[0:sample_rate // 2])
-        # Normalisierung?
-        normale = (2.0 / sample_rate * apfel)
+        # Floored division means round towards negative infinity. This is the same as truncation for positive values, but not for negative. 3.3 rounds down to 3, but -3.3 rounds down to -4.
+        yf_pos = yf[0:sample_rate // 2]
+        apfel = np.abs(yf_pos)
+        # Normalisierung - Die FFT-Werte nach (5.19) muss man demnach mit T = 1/fA multiplizieren.
+        normale = apfel * (1 / sample_rate)
         out = [ax.plot(xf, normale)]
         ax.set_title('Fourier Transformation in linear und log bis 10k')
-        ax.set_xlabel('Frequency')
+        ax.set_xlabel('Frequency in [Hz]')
         ax.set_ylabel('Amplitude linear')
-        ax.set_xlim(left=0, right=1e4)
+        ax.set_xlim(left=50, right=2e4)
         ax.grid()
 
         out.append(ax1.plot(xf, normale))
         # plt.legend(loc='upper right')
         ax1.set_xlabel('Dateiname:\n' + filename)
-        ax1.set_xlim(left=0, right=1e4)
+        ax1.set_xlim(left=50, right=2e4)
         ax1.set_yscale('log')
         ax1.set_ylabel('Amplitude in dB')
 
@@ -260,7 +265,7 @@ if __name__ == "__main__":
                            omega=omega_butter)
 
         # Plot der Original Datei
-        fig1, axs = plt.subplots(2, 1, figsize=(12, 8))  # , sharex=True)
+        fig1, axs = plt.subplots(2, 1)  # , sharex=True)
         ax1, ax2 = axs
 
         # Logaritmische Darstellung
@@ -270,7 +275,7 @@ if __name__ == "__main__":
         plotSounds(ax2, data=columnData, filename=columnName, abszisse=time,
                    log=False, title='')
 
-        fig2, axs = plt.subplots(4, 1, figsize=(12, 8))
+        fig2, axs = plt.subplots(4, 1)
 
         plotSounds(axs[0], data=filtered, filename=columnName, abszisse=time,
                    title='Gebuttert mit $\omega$= %i' % omega_butter, log=False)
@@ -281,7 +286,7 @@ if __name__ == "__main__":
         plotSounds(axs[1], data=moved_average_data, filename=columnName, abszisse=time[0:tmp_time],
                    title='Moving AVG', log=False)
 
-        fig3, axs = plt.subplots(2, 1, figsize=(12, 8))
+        fig3, axs = plt.subplots(2, 1)
 
         moved_average_data = mov_avg(data_filtered=columnData, timevec=time, do_plot=False)
         moved_average_data = moved_average_data.values
@@ -296,36 +301,70 @@ if __name__ == "__main__":
 
         # fig3.show()
 
-        fig4, axs = plt.subplots(2, 1, figsize=(12, 8))
+        fig4, axs = plt.subplots(2, 1)
         fft_standard = fft_test(ax2d=axs, data=columnData, do_plot=True, filename=columnName)
-        fig5, axs = plt.subplots(2, 1, figsize=(12, 8))
 
+        fig5, axs = plt.subplots(2, 1)
         fft_butter = fft_test(ax2d=axs, data=filtered, do_plot=True, filename=columnName+'buttered')
+
+
+        from scipy.signal import blackman
+
+        fig6, axs = plt.subplots(2, 1)
+        w = blackman(552000)
+        y = columnData.to_numpy() * w
+        fft_blackman = fft_test(ax2d=axs, data=y, do_plot=True, filename=columnName+'blackman')
+
+        fig7, axs = plt.subplots(2, 1)
+        # find data values above the threshold
+        #outliers = np.where(signal > threshold)[0]
+
+        ax1 = axs[0]
+        ax1.hist(columnData,bins = 300, color='#0504aa',
+                            alpha=0.7, rwidth=0.85, density=True)
+        ax2 = axs[1]
+        from scipy.signal import periodogram
+
+        f, P = periodogram(columnData, fs=48e4, scaling = 'spectrum', return_onesided=True)
+        #plotSounds(ax2, data=P, abszisse=f, title='Periodogramm', log=False, xlab='Frequenzen Hz')
+        ax2.plot(f,P)
+        #ax2.set_xlim(left=0,right=3000)
+        ax2.set_xlabel('frequency [Hz]')
+        ax2.set_ylabel('PSD [V/Hz]')
+        print(f,P)
+
+
 
         # print(fft[0])
 
         if do_plot:
             fig1.tight_layout()
-            fig1.show()
+            #fig1.show()
             plt.close(fig1)
 
             fig2.tight_layout()
-            fig2.show()
+            #fig2.show()
             plt.close(fig2)
 
             fig3.tight_layout()
-            fig3.show()
+            #fig3.show()
             plt.close(fig3)
 
             fig4.tight_layout()
-            fig4.show()
+            #fig4.show()
             plt.close(fig4)
 
             fig5.tight_layout()
             fig5.show()
             plt.close(fig5)
 
+            fig6.tight_layout()
+            #fig6.show()
+            plt.close(fig6)
 
+            fig7.tight_layout()
+            fig7.show()
+            plt.close(fig7)
         else:
             print('Keine Plots erwünscht')
         break
