@@ -74,14 +74,14 @@ def fft_test(ax2d, data, sample_rate=48000, do_plot=False, filename='test'):
         apfel = np.abs(yf[0:sample_rate // 2])
         # Normalisierung?
         normale = (2.0 / sample_rate * apfel)
-        out = ax.plot(xf, normale)
+        out = [ax.plot(xf, normale)]
         ax.set_title('Fourier Transformation in linear und log bis 10k')
         ax.set_xlabel('Frequency')
         ax.set_ylabel('Amplitude linear')
         ax.set_xlim(left=0, right=1e4)
         ax.grid()
 
-        out = ax1.plot(xf, normale)
+        out.append(ax1.plot(xf, normale))
         # plt.legend(loc='upper right')
         ax1.set_xlabel('Dateiname:\n' + filename)
         ax1.set_xlim(left=0, right=1e4)
