@@ -256,10 +256,23 @@ if __name__ == "__main__":
 
         # plotSounds(data=columnData, filename=columnName)
         print(columnData.max())
+        print(columnData.min())
         # Anlegen der Variablen
+        columnData = columnData / (2**12)
+        print(columnData.max())
+        print(columnData.min())
+
+        columnData.tail()
+
+
+
+
+
+
         length = columnData.shape[0] / samplerate
         time = np.linspace(0., length, columnData.shape[0])
         omega_butter = 100
+
         # Erst mal buttern mit Original dan filtern mit original
         filtered = buttern(data=columnData, filename=columnName, timevec=time,
                            omega=omega_butter)
@@ -339,15 +352,15 @@ if __name__ == "__main__":
 
         if do_plot:
             fig1.tight_layout()
-            #fig1.show()
+            fig1.show()
             plt.close(fig1)
 
             fig2.tight_layout()
-            #fig2.show()
+            fig2.show()
             plt.close(fig2)
 
             fig3.tight_layout()
-            #fig3.show()
+            fig3.show()
             plt.close(fig3)
 
             fig4.tight_layout()
@@ -363,7 +376,7 @@ if __name__ == "__main__":
             plt.close(fig6)
 
             fig7.tight_layout()
-            fig7.show()
+            #fig7.show()
             plt.close(fig7)
         else:
             print('Keine Plots erwünscht')
