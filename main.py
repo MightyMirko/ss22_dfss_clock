@@ -93,13 +93,11 @@ if __name__ == "__main__":
             p = Process(target=playsound, args=(filepath))
             p.start()
         ## Normalisierung
-        columnData = columnData / (2**32)
-        # Braucht man dieses Lesen wirklich jedes Mal?
-        samplerate = wavfile.read(filename=audio_dir+columnName+'.wav')[0]
+        columnData = columnData / (2**12)
+        samplerate = 48e3 # wavfile.read(filename=audio_dir+columnName+'.wav')[0]# Braucht man dieses Lesen wirklich jedes Mal?
 
         length = columnData.shape[0] / samplerate
         time = np.linspace(0., length, columnData.shape[0])
-        omega_butter = 100
 
         if do_plot:
             pass
