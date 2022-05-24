@@ -224,7 +224,8 @@ def getWavFromFolder(wavdir, do_test=False):
                 filenames.append(filename)
                 samplerate, data = wavfile.read(filename=pfad)
                 df[filename] = data
-                break
+                #df['samplerate'] = samplerate
+                #break
     return wavfiles, df
 
 
@@ -238,16 +239,14 @@ if __name__ == "__main__":
     do_test_mode = True
     do_play = False
 
-    audio_dir = (r'rohdaten/')  # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
-    files, df = getWavFromFolder(wavdir=audio_dir,
-                                 do_test=do_test_mode)  # ich mag explizite Programmierung. Also wavdir=...,
+    audio_dir = (r'data/')  # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
+    files, df = getWavFromFolder(wavdir=audio_dir,do_test=False)  # ich mag explizite Programmierung. Also wavdir=...,
     # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
-    samplerate = 48000
     plt.clf()
 
     # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
     for (columnName, columnData) in df.iteritems():
-        if do_test_mode and not 'test' in columnName:
+        if do_test_mode and not '20220509_17_19_45' in columnName:
             continue
         if do_play:
             filepath = [audio_dir + columnName + '.wav']
@@ -255,12 +254,13 @@ if __name__ == "__main__":
             p.start()
 
         # plotSounds(data=columnData, filename=columnName)
-        print(columnData.max())
-        print(columnData.min())
-        # Anlegen der Variablen
+        # Normalisierung (eigl 32bit..., aber die Amplituden sind so klein :(
         columnData = columnData / (2**12)
-        print(columnData.max())
-        print(columnData.min())
+
+        # Braucht man dieses Lesen wirklich jedes Mal?
+
+        samplerate = wavfile.read(filename=audio_dir+columnName+'.wav')[0]
+        print(samplerate)
 
         columnData.tail()
 
@@ -314,23 +314,13 @@ if __name__ == "__main__":
 
         # fig3.show()
 
-        fig4, axs = plt.subplots(2, 1)
-        fft_standard = fft_test(ax2d=axs, data=columnData, do_plot=True, filename=columnName)
+        #fig4, axs = plt.subplots(2, 1)
+        #fft_standard = fft_test(ax2d=axs, data=columnData, do_plot=True, filename=columnName)
 
         fig5, axs = plt.subplots(2, 1)
         fft_butter = fft_test(ax2d=axs, data=filtered, do_plot=True, filename=columnName+'buttered')
 
 
-        from scipy.signal import blackman
-
-        fig6, axs = plt.subplots(2, 1)
-        w = blackman(552000)
-        y = columnData.to_numpy() * w
-        fft_blackman = fft_test(ax2d=axs, data=y, do_plot=True, filename=columnName+'blackman')
-
-        fig7, axs = plt.subplots(2, 1)
-        # find data values above the threshold
-        #outliers = np.where(signal > threshold)[0]
 
         ax1 = axs[0]
         ax1.hist(columnData,bins = 300, color='#0504aa',

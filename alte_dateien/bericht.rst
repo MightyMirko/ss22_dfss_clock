@@ -55,4 +55,10 @@ Ein kontinuierliches Tiefpass-Signal muss mit einer Frequenz abgetastet werden, 
 Insbesondere bei Zufallssignalen lässt sich das Spektrum nicht exakt messen, man spricht deshalb oft von einer Schätzung des Spektrums und nicht von einer Messung.
 
 
- Die Anzahl der Datenpunkte (k), die Sie vor- und zurückgehen lassen, ist der springende Punkt eines Filters zur Mittelwertglättung. Dies wird als die Ordnung des Filters bezeichnet.
+Die Anzahl der Datenpunkte (k), die Sie vor- und zurückgehen lassen, ist der springende Punkt eines Filters zur Mittelwertglättung. Dies wird als die Ordnung des Filters bezeichnet.
+
+Schwerpunktwellenlänge
+Die Schwerpunktwellenlänge λ c {\displaystyle \lambda _{c}} \lambda _{c} (Index c für engl. centroid = Schwerpunkt) wird in der digitalen Signalverarbeitung als Maß eingesetzt, um ein Frequenzspektrum zu charakterisieren. Sie gibt an, wo sich der "Mittelpunkt" des Spektrums befindet.
+Die Schwerpunktwellenlänge wird berechnet als gewichtetes arithmetisches Mittel der Wellenlängen λ {\displaystyle \lambda } \lambda , gewichtet mit ihren Amplituden anhand der Verteilungsfunktion s ( λ ) {\displaystyle s(\lambda )} {\displaystyle s(\lambda )}:[1]
+Die Schwerpunktwellenlänge wird in der digitalen Audiotechnik bzw. Akustik zur Bestimmung der Klangfarbe eingesetzt.[2][3]
+https://de.wikipedia.org/wiki/Schwerpunktwellenl%C3%A4nge
