@@ -21,7 +21,7 @@ wanted_num_of_bins = 40  # number of frequency bins to display
 # initialize soundcard for recording:
 fs = 8000
 
-stream = wavfile.read('audio_for_test.wav')
+stream = wavfile.read('../audio_for_test.wav')
 
 while 1:  # for each recorded window (until ctr+c) is pressed
     # get current block and convert to list of short ints,

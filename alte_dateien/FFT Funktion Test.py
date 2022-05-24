@@ -75,7 +75,7 @@ def FFT_func(signal, samplerate):
 
 
 #einlesen & konvertieren
-samplerate, data = wavfile.read('audio_for_test.wav')
+samplerate, data = wavfile.read(r'..\rohdaten\audio_for_test.wav')
 signal = pd.Series(data) 
 
 FFT_function(signal, samplerate, pl=True, log=False)
