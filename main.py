@@ -18,7 +18,7 @@ import pandas
 from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
 import numpy as np
-
+from multiprocessing import Pool, Process
 
 def plotsounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=48000, log=True,
                xlab='Time [signal]', ylab='Amplitude', title='Ticken im Original'):
@@ -111,14 +111,14 @@ def fn_plot(featvec, names, s):
     plt.close()
 
 
-def plot_energy(f,fn):
+def plot_energy(f,fn,filename):
     energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
     d_energy = f[fn.index('delta energy'), :]
     dd_energy = np.diff(d_energy)
     ddd_energy = np.diff(dd_energy)
 
     fig1, axs = plt.subplots(4, 1, sharex='col')
-    axs[0].set_title(audiofile)
+    axs[0].set_title(filename)
     axs[0].plot(energy)
     axs[0].set_ylabel(fn[1])
     axs[1].plot(d_energy)
@@ -133,94 +133,91 @@ def plot_energy(f,fn):
     fig1.show()
 
 
+def processFolder(audiofile, df, win = 0.005, step = 0.005):
+    audiofile = os.path.join(audio_dir + audiofile)
+    fs, signal = aIO.read_audio_file(audiofile)
+    ###############
+    # Anlegen der Variablen
+    ###############
+    duration = len(signal) / float(fs)
+    time = np.arange(0, duration - step, win)
+    # extract short-term features using a 50msec non-overlapping windows
+    [f, fn] = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
+    return f, fn, fs, signal
+
+
+
+def cut_signal(f,fn, s):
+    energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
+    d_energy = f[fn.index('delta energy'), :]
+    dd_energy = np.diff(d_energy)
+    ddd_energy = np.diff(dd_energy)
+
+    indexofpeak = d_energy.argmax()  # Wo ist das Maximum
+    peak_in_ms = win * indexofpeak
+    back_in_ms = peak_in_ms - 0.04
+    adv_in_ms = peak_in_ms + 0.2
+    back_in_sample = int(fs * back_in_ms)
+    adv_in_sample = int(fs * adv_in_ms)
+    deltasample = adv_in_sample - back_in_sample
+    olds = s.copy()
+    tmps = s[back_in_sample:adv_in_sample]
+    news = s.copy()
+    news[back_in_sample:adv_in_sample] = s[back_in_sample:adv_in_sample] * 0
+
+    return olds, tmps, news
+
 if __name__ == "__main__":
 
     print('hello World')
     do_plot = False
-    do_test_mode = True
+    do_test_mode = False
     do_play = False
     show_progress = True
+
     csv_exp = pd.DataFrame()
     audio_dir = (r'data/')
+    plt.clf()
+    apfel = 0
+    wavfiles = listdir(audio_dir)
+    win, step = 0.005, 0.005
     # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
     # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
-    plt.clf()
     # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
-    wavfiles = listdir(r'data')
     #############
     # Untersuchen des Signals und Fenstern
     ############
 
-    t = tqdm(total=1, unit="file", disable=not show_progress)
-    win, step = 0.005, 0.005
     if do_test_mode:
         csv_exp = pandas.read_csv(audio_dir + "csv.csv")
-        apfel = 3
         csv_exp.set_index('Unnamed: 0')
         csv_exp = csv_exp.drop(columns=['Unnamed: 0'])
+        apfel = 3
 
     else:
-        for audiofile in wavfiles:
-            t.update()
-            if not '.wav' in audiofile:
-                continue
-            if '16_10_21' in audiofile:
-                continue
+        while apfel < 3:
 
-            audiofile = os.path.join(audio_dir + audiofile)
-            # print(audiofile)
-            fs, signal = aIO.read_audio_file(audiofile)
-            apfel = 0
-
-            while apfel < 3:
-                ###############
-                # Anlegen der Variablen
-                ###############
-                duration = len(signal) / float(fs)
-                time = np.arange(0, duration - step, win)
-                timew = np.linspace(0., duration, len(signal))
-                # extract short-term features using a 50msec non-overlapping windows
-
-                [f, fn] = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
-                ###############
-                # Anlegen der Variablen aus den statistischen Methoden
-                ###############
-                # durchschnittliche Energie und die Ausreißer killen.. Habe eventuell nur einen?
-
-                energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
-                (spec) = aF.spectrogram(signal, fs, int(fs * win), int(fs * step), plot=False, show_progress=False)
-                (chroma) = aF.chromagram(signal, fs, int(fs * win), int(fs * step), plot=False, show_progress=False)
-
-                d_energy = f[fn.index('delta energy'), :]
-                dd_energy = np.diff(d_energy)
-                ddd_energy = np.diff(dd_energy)
-
-                #print(spectral_flux)
-                if apfel == 0 or apfel == 2:
-                    pass
-                    #print('plots off')
-                    #fn_plot(f,fn,signal)
-                    #chroma_plot(f,fn)
-                    #plot_energy(f,fn)
+            ###############
+            # Anlegen der Variablen aus den statistischen Methoden
+            ###############
+            for audiofile in wavfiles:
+                t = tqdm(total=1, unit="file", disable=not show_progress)
+                t.update()
+                if not '.wav' in audiofile:
+                    continue
+                if '16_10_21' in audiofile:
+                    continue
+                f, fn, fs, signal = processFolder(audiofile,csv_exp,win,step)
+                t.set_postfix(dir=audio_dir)
+                t.close()
+                timew = np.linspace(0., len(signal) / float(fs) , len(signal))
 
                 ###############
                 # Nehme den gefunden Index und schneide signal heraus in tmps
                 ###############
-                maxenergy = d_energy.max()
-                indexofpeak = d_energy.argmax()  # Wo ist das Maximum
-
-                peak_in_ms = win * indexofpeak
-                back_in_ms = peak_in_ms - 0.04
-                adv_in_ms = peak_in_ms + 0.2
-                back_in_sample = int(fs * back_in_ms)
-                adv_in_sample = int(fs * adv_in_ms)
-                deltasample = adv_in_sample - back_in_sample
-                olds = signal.copy()
-                tmps = signal[back_in_sample:adv_in_sample]
-                news = signal.copy()
-                news[back_in_sample:adv_in_sample] = signal[back_in_sample:adv_in_sample] * 0
-
-                spaltenname = audiofile.strip(audio_dir)+'tick'+str(apfel)
+                olds, tmps, news = cut_signal(f, fn, signal)
+                spaltenname = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(apfel)
+                ## noch besser sortieren??
                 try:
                     csv_exp[spaltenname] = tmps
                 except ValueError:
@@ -230,67 +227,68 @@ if __name__ == "__main__":
                     except ValueError:
                         pass
 
-                csv_exp.head()
-
-            # do_plot = True
-                if apfel == 0:
-                    global first_nrg
-                    first_nrg= energy
-
-                if do_plot and apfel == 4 :
-                    fig2, axs = plt.subplots(4, 1)
-                    # plt.title('matplotlib.pyplot.figure() Example\n',fontsize=14, fontweight='bold')
-                    axs[0].set_title(audiofile)
-                    axs[0].plot(timew, olds)
-                    axs[0].set_xlabel('Samples')
-                    axs[0].set_ylabel('Original')
-                    axs[1].plot(tmps)
-                    axs[1].set_ylabel('Ausgeschnitten')
-                    axs[2].plot(timew, news)
-                    axs[2].set_ylabel('Old - cutted')
-                    axs[3].plot(energy)
-                    axs[3].plot(first_nrg)
-
-                    for i in axs:
-                        i.grid()
-                    fig2.show()
-              #  do_plot = False
-
-                #########################
-                # Überprüfen ob das geschnittene Signal mehr als starkes Rauschen ist
-                #########################
-                #energy_gesamt = np.sum(signal**2)/len(signal)
-                #tmps_gesamt = np.sum(tmps ** 2)/len(tmps)
-                #diff = tmps_gesamt - energy_gesamt
-               # csv_exp.describe()
-
-                txt = "{}. Durchgang:\n" +  "Energie gesamt:\t {}\n" + "Tickenergie gesamt:\t {}\n" +"Differenz:\t {}\n"
-
-
-               # print(txt.format(apfel+1, energy_gesamt, tmps_gesamt, diff))
+            if apfel == 0 or apfel == 2:
+                pass
+                #print('plots off')
+                #fn_plot(f,fn,signal)
+                #chroma_plot(f,fn)
+                #plot_energy(f,fn)
 
 
 
+        # do_plot = True
+            if apfel == 0:
+                global first_nrg
+                first_nrg =  f[fn.index('energy'), :]
 
-                #########################
-                # Setzen vor Rekursion Ende
-                #########################
+            if do_plot and apfel == 4 :
+                fig2, axs = plt.subplots(4, 1)
+                # plt.title('matplotlib.pyplot.figure() Example\n',fontsize=14, fontweight='bold')
+                axs[0].set_title(audiofile)
+                axs[0].plot(timew, olds)
+                axs[0].set_xlabel('Samples')
+                axs[0].set_ylabel('Original')
+                axs[1].plot(tmps)
+                axs[1].set_ylabel('Ausgeschnitten')
+                axs[2].plot(timew, news)
+                axs[2].set_ylabel('Old - cutted')
+                axs[3].plot(f[fn.index('energy'), :])
+                axs[3].plot(first_nrg)
 
-                signal = news.copy()
-                apfel += 1
+                for i in axs:
+                    i.grid()
+                fig2.show()
+          #  do_plot = False
 
-                #########################
-                # achtung while Schleife ende
-                #########################
+            #########################
+            # Überprüfen ob das geschnittene Signal mehr als starkes Rauschen ist
+            #########################
+            #energy_gesamt = np.sum(signal**2)/len(signal)
+            #tmps_gesamt = np.sum(tmps ** 2)/len(tmps)
+            #diff = tmps_gesamt - energy_gesamt
+           # csv_exp.describe()
 
-            #break
+            #txt = "{}. Durchgang:\n" +  "Energie gesamt:\t {}\n" + "Tickenergie gesamt:\t {}\n" +"Differenz:\t {}\n"
+            #print(txt.format(apfel+1, energy_gesamt, tmps_gesamt, diff))
+
+            #########################
+            # Setzen vor Rekursion Ende
+            #########################
+
+            signal = news.copy()
+            apfel += 1
+
+            #########################
+            # achtung while Schleife ende
+            #########################
+
+        #break
 
 
     #standard_deviations = 3
     #df[df.apply(lambda x: np.abs(x - x.mean()) / x.std() < standard_deviations).all(axis=1)]
 
-    t.set_postfix(dir=audio_dir)
-    t.close()
+
 
     if do_plot:
         pass
@@ -300,5 +298,6 @@ if __name__ == "__main__":
 
     plt.clf()
     plt.close()
+
 
     print('bye world')
