@@ -12,7 +12,7 @@ import os
 from scipy.io import wavfile
 
 
-# get window's dimensions
+# get window'signal dimensions
 rows, columns = 12,30
 
 buff_size = 0.2          # window size in seconds

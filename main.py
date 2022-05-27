@@ -21,7 +21,7 @@ import numpy as np
 
 
 def plotSounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=48000, log=True,
-               xlab='Time [s]', ylab='Amplitude', title='Ticken im Original'):
+               xlab='Time [signal]', ylab='Amplitude', title='Ticken im Original'):
     """
     Plottet eine Spalte oder ein Vektor in Timedomain
 
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     do_plot = False
     do_test_mode = True
     do_play = False
+    show_progress = True
 
     audio_dir = (r'data/')
     # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
@@ -113,7 +114,6 @@ if __name__ == "__main__":
     # Untersuchen des Signals und Fenstern
     ############
 
-    show_progress = True
     t = tqdm(total=1, unit="file", disable=not show_progress)
     win, step = 0.01, 0.01
 
@@ -125,17 +125,26 @@ if __name__ == "__main__":
 
         audiofile = os.path.join(audio_dir + audiofile)
         # print(audiofile)
-        fs, s = aIO.read_audio_file(audiofile)
-        duration = len(s) / float(fs)
+        fs, signal = aIO.read_audio_file(audiofile)
+
+
+        ###############
+        # Anlegen der Variablen
+        ###############
+        duration = len(signal) / float(fs)
         time = np.arange(0, duration - step, win)
-        timew = np.linspace(0., duration, len(s))
+        timew = np.linspace(0., duration, len(signal))
         # extract short-term features using a 50msec non-overlapping windows
 
-        [f, fn] = aF.feature_extraction(s, fs, int(fs * win), int(fs * step), True)
+        [f, fn] = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
+        ###############
+        # Anlegen der Variablen aus den statistischen Methoden
+        ###############
+        # durchschnittliche Energie und die Ausreißer killen.. Habe eventuell nur einen?
 
         energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
-        (spec) = aF.spectrogram(s, fs, int(fs * win), int(fs * step), plot=False, show_progress=True)
-        (chroma) = aF.chromagram(s, fs, int(fs * win), int(fs * step), plot=False, show_progress=True)
+        (spec) = aF.spectrogram(signal, fs, int(fs * win), int(fs * step), plot=False, show_progress=False)
+        (chroma) = aF.chromagram(signal, fs, int(fs * win), int(fs * step), plot=False, show_progress=False)
         d_energy = f[fn.index('delta energy'), :]
         fig1, axs = plt.subplots(4, 1)
         dd_energy = np.diff(d_energy)
@@ -156,35 +165,42 @@ if __name__ == "__main__":
         axs[3].plot(ddd_energy)
         axs[3].set_xlabel('Frame Number')
         axs[3].set_ylabel(fn[1])
+        for i in axs:
+            i.grid()
 
 
-
+        ###############
+        # Nehme den gefunden Index und schneide signal heraus in tmps
+        ###############
         maxenergy = d_energy.max()
         indexofpeak = d_energy.argmax()  # Wo ist das Maximum
-        print(indexofpeak)
-        ## Nehme den gefunden Index und schneide signal heraus in tmps
+
         peak_in_ms = win * indexofpeak
         back_in_ms = peak_in_ms - 0.04
         adv_in_ms = peak_in_ms + 0.2
+        back_in_sample = int(fs * back_in_ms)
+        adv_in_sample = int(fs * adv_in_ms)
 
-        zero = np.zeros(96000)
-        tmps = s[int(back_in_ms * fs*duration):int(fs * adv_in_ms*duration)]
+        olds = signal.copy()
+        tmps = signal[back_in_sample:adv_in_sample]
+        news = signal.copy()
+        news[back_in_sample:adv_in_sample] = signal[back_in_sample:adv_in_sample] * 0
 
-        fig2, axs1 = plt.subplots(3, 1)
-        axs1[0].plot(timew, s)
-        axs1[0].set_xlabel('Samples')
-        axs1[0].set_ylabel('Original')
-        axs1[0].grid()
-        axs1[1].plot(tmps)
-        axs1[1].set_ylabel('Cutted')
+        fig2, axs = plt.subplots(3, 1)
 
-        news = s[tmps.shape[0] + 1:]
-        axs1[2].plot(timew[timew.shape[0] - news.shape[0]:], news)
-        axs1[2].set_ylabel('Old - cutted')
+        axs[0].plot(timew, olds)
+        axs[0].set_xlabel('Samples')
+        axs[0].set_ylabel('Original')
+        axs[1].plot(tmps)
+        axs[2].plot(timew, news)
+        axs[2].set_ylabel('Old - cutted')
 
+        for i in axs:
+            i.grid()
         plt.show()
 
-        # cut(s=news,fs=fs,win=win,step=step)
+
+
 
         break
 
@@ -192,25 +208,7 @@ if __name__ == "__main__":
     t.close()
 
     if do_plot:
-        fig1, axs = plt.subplots(2, 1)
-        axs[0].plot(f[0, :])
-        axs[0].set_xlabel('Frame no')
-        axs[0].set_ylabel(fn[0])
-        axs[1].plot(f[1, :])
-        axs[1].set_xlabel('Frame no')
-        axs[1].set_ylabel(fn[1])
-        plt.show()
-
-        import plotly.graph_objects as go
-        import plotly.io as pio
-
-        # pio.renderers.default = 'png'
-        pio.renderers.render_on_display = True
-        fig = go.Figure(
-            data=[go.Bar(y=[2, 1, 3])],
-            layout_title_text="A Figure Displayed with fig.show()"
-        )
-        fig.show();
+       pass
     else:
         print('Keine Plots erwünscht')
 
