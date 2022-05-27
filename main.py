@@ -52,6 +52,8 @@ def getWavFromFolder(wavdir, do_test=False):
     wavfiles = []
     filenames = []
     df = pd.DataFrame()
+
+
     for file in listdir(wavdir):
         if file.endswith(".wav"):
             import re
@@ -71,6 +73,7 @@ def getWavFromFolder(wavdir, do_test=False):
 
 from playsound import playsound
 from multiprocessing import Process
+
 
 if __name__ == "__main__":
 
@@ -97,7 +100,16 @@ if __name__ == "__main__":
         samplerate = 48e3 # wavfile.read(filename=audio_dir+columnName+'.wav')[0]# Braucht man dieses Lesen wirklich jedes Mal?
 
         length = columnData.shape[0] / samplerate
+        print(length)
         time = np.linspace(0., length, columnData.shape[0])
+
+        win, step = 0.03, 0.03
+        time_window = np.arange(0, duration - step, win)
+
+
+
+
+
 
         if do_plot:
             pass
