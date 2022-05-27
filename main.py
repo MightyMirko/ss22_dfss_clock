@@ -15,6 +15,10 @@ from scipy.fft import fft, fftfreq
 from scipy.signal import butter
 from scipy.signal import sosfilt
 
+import tqdm
+import os
+
+
 
 def plotSounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=48000, log=True,
                xlab='Time [s]', ylab='Amplitude', title='Ticken im Original'):
@@ -43,6 +47,9 @@ def plotSounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=480
     return out
 
 
+from tqdm.notebook import trange, tqdm
+
+
 def getWavFromFolder(wavdir, do_test=False):
     """
     Sucht alle Wavdateien in einem Ordner und speichert die Rohdaten in einem gemeinsamenem Objekt
@@ -53,6 +60,11 @@ def getWavFromFolder(wavdir, do_test=False):
     filenames = []
     df = pd.DataFrame()
 
+    show_progress = True
+    t = tqdm(total=1, unit="file", disable=not show_progress)
+
+    if not os.path.exists(wavdir):
+        raise IOError("Cannot find:" + wavdir)
 
     for file in listdir(wavdir):
         if file.endswith(".wav"):
@@ -68,56 +80,100 @@ def getWavFromFolder(wavdir, do_test=False):
                 df[filename] = data
                 #df['samplerate'] = samplerate
                 #break
+        t.update()
+        t.set_postfix(dir=wavdir)
+    t.close()
+
     return wavfiles, df
 
 
 from playsound import playsound
 from multiprocessing import Process
-
+import pandas
+from pyAudioAnalysis import ShortTermFeatures as aF
+from pyAudioAnalysis import audioBasicIO as aIO
+from pyAudioAnalysis import MidTermFeatures as mF
+import numpy as np
+import plotly.graph_objs as go
+import plotly
+import IPython
 
 if __name__ == "__main__":
 
     print('hello World')
-    do_plot = True
+    do_plot = False
     do_test_mode = True
     do_play = False
 
-    audio_dir = (r'data/')  # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
-    files, df = getWavFromFolder(wavdir=audio_dir,do_test=False)  # ich mag explizite Programmierung. Also wavdir=...,
+    audio_dir = (r'data/')
+    # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
     # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
     plt.clf()
 
     # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
-    for (columnName, columnData) in df.iteritems():
-        if do_test_mode and not '20220509_17_19_45' in columnName:
+
+    window, step = 0.03, 0.03
+    wavfiles = listdir(r'data')
+    #############
+    # Untersuchen des Signals und Fenstern
+    ############
+
+    show_progress = True
+    t = tqdm(total=1, unit="file", disable=not show_progress)
+    win, step = 0.03, 0.03
+
+    for audiofile in wavfiles:
+        if not '.wav' in audiofile:
             continue
-        if do_play:
-            filepath = [audio_dir + columnName + '.wav']
-            p = Process(target=playsound, args=(filepath))
-            p.start()
-        ## Normalisierung
-        columnData = columnData / (2**12)
-        samplerate = 48e3 # wavfile.read(filename=audio_dir+columnName+'.wav')[0]# Braucht man dieses Lesen wirklich jedes Mal?
+        if '16_10_21' in audiofile:
+                continue
 
-        length = columnData.shape[0] / samplerate
-        print(length)
-        time = np.linspace(0., length, columnData.shape[0])
+        audiofile = os.path.join(audio_dir + audiofile)
+        print(audiofile)
+        fs, s = aIO.read_audio_file(audiofile)
+        duration = len(s) / float(fs)
+        time = np.arange(0, duration - step, win)
 
-        win, step = 0.03, 0.03
-        time_window = np.arange(0, duration - step, win)
+        # extract short-term features using a 50msec non-overlapping windows
 
+        [f, fn] = aF.feature_extraction(s, fs, int(fs * win),
+                                        int(fs * step))
 
+        if feature_frame.empty:
+            feature_frame = pandas.DataFrame(f, index=fn)
+        #feature_frame.append(pandas.DataFrame(f, index=fn))
+        t.update()
+        print(feature_frame.axes)
 
+        feature_frame.plot(y="energy" )
 
-
-
-        if do_plot:
-            pass
-        else:
-            print('Keine Plots erwünscht')
         break
-        if do_play:
-            p.join()
+
+
+
+
+
+
+    t.set_postfix(dir=audio_dir)
+    t.close()
+
+
+
+
+    if do_plot:
+        import plotly.graph_objects as go
+        import plotly.io as pio
+
+        # pio.renderers.default = 'png'
+        pio.renderers.render_on_display = True
+        fig = go.Figure(
+            data=[go.Bar(y=[2, 1, 3])],
+            layout_title_text="A Figure Displayed with fig.show()"
+        )
+        fig.show();
+    else:
+        print('Keine Plots erwünscht')
+
     plt.clf()
     plt.close()
     print('bye world')
