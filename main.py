@@ -2,22 +2,22 @@
 # @Date 14.02.2022
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
 plt.rcParams['figure.dpi'] = 150
 # plt.rcParams['interactive'] = True
-plt.rcParams['figure.figsize'] = (21, 9)
+plt.rcParams['figure.figsize'] = (12, 9)
 from scipy.io import wavfile
 from os.path import join as pjoin
 from os import listdir
-from scipy.fft import fft, fftfreq
-from scipy.signal import butter
-from scipy.signal import sosfilt
 
 import tqdm
 import os
 
+import pandas
+from pyAudioAnalysis import ShortTermFeatures as aF
+from pyAudioAnalysis import audioBasicIO as aIO
+import numpy as np
 
 
 def plotSounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=48000, log=True,
@@ -47,7 +47,7 @@ def plotSounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=480
     return out
 
 
-from tqdm.notebook import trange, tqdm
+from tqdm.notebook import tqdm
 
 
 def getWavFromFolder(wavdir, do_test=False):
@@ -78,8 +78,8 @@ def getWavFromFolder(wavdir, do_test=False):
                 filenames.append(filename)
                 samplerate, data = wavfile.read(filename=pfad)
                 df[filename] = data
-                #df['samplerate'] = samplerate
-                #break
+                # df['samplerate'] = samplerate
+                # break
         t.update()
         t.set_postfix(dir=wavdir)
     t.close()
@@ -87,16 +87,11 @@ def getWavFromFolder(wavdir, do_test=False):
     return wavfiles, df
 
 
-from playsound import playsound
-from multiprocessing import Process
-import pandas
-from pyAudioAnalysis import ShortTermFeatures as aF
-from pyAudioAnalysis import audioBasicIO as aIO
-from pyAudioAnalysis import MidTermFeatures as mF
-import numpy as np
-import plotly.graph_objs as go
-import plotly
-import IPython
+def cut(s, fs, win, step):
+    [f, fn] = aF.feature_extraction(s, fs, int(fs * win),
+                                    int(fs * step), True)
+    pass
+
 
 if __name__ == "__main__":
 
@@ -120,47 +115,92 @@ if __name__ == "__main__":
 
     show_progress = True
     t = tqdm(total=1, unit="file", disable=not show_progress)
-    win, step = 0.03, 0.03
+    win, step = 0.01, 0.01
 
     for audiofile in wavfiles:
         if not '.wav' in audiofile:
             continue
         if '16_10_21' in audiofile:
-                continue
+            continue
 
         audiofile = os.path.join(audio_dir + audiofile)
-        print(audiofile)
+        # print(audiofile)
         fs, s = aIO.read_audio_file(audiofile)
         duration = len(s) / float(fs)
         time = np.arange(0, duration - step, win)
-
+        timew = np.linspace(0., duration, len(s))
         # extract short-term features using a 50msec non-overlapping windows
 
-        [f, fn] = aF.feature_extraction(s, fs, int(fs * win),
-                                        int(fs * step))
+        [f, fn] = aF.feature_extraction(s, fs, int(fs * win), int(fs * step), True)
 
-        if feature_frame.empty:
-            feature_frame = pandas.DataFrame(f, index=fn)
-        #feature_frame.append(pandas.DataFrame(f, index=fn))
-        t.update()
-        print(feature_frame.axes)
+        energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
+        (spec) = aF.spectrogram(s, fs, int(fs * win), int(fs * step), plot=False, show_progress=True)
+        (chroma) = aF.chromagram(s, fs, int(fs * win), int(fs * step), plot=False, show_progress=True)
+        d_energy = f[fn.index('delta energy'), :]
+        fig1, axs = plt.subplots(4, 1)
+        dd_energy = np.diff(d_energy)
+        ddd_energy = np.diff(dd_energy)
 
-        feature_frame.plot(y="energy" )
+        axs[0].plot(energy)
+        axs[0].set_xlabel('Frame Number')
+        axs[0].set_ylabel(fn[1])
+
+        axs[1].plot(d_energy)
+        axs[1].set_xlabel('Frame Number')
+        axs[1].set_ylabel(fn[1])
+
+        axs[2].plot(dd_energy)
+        axs[2].set_xlabel('Frame Number')
+        axs[2].set_ylabel(fn[1])
+
+        axs[3].plot(ddd_energy)
+        axs[3].set_xlabel('Frame Number')
+        axs[3].set_ylabel(fn[1])
+
+
+
+        maxenergy = d_energy.max()
+        indexofpeak = d_energy.argmax()  # Wo ist das Maximum
+        print(indexofpeak)
+        ## Nehme den gefunden Index und schneide signal heraus in tmps
+        peak_in_ms = win * indexofpeak
+        back_in_ms = peak_in_ms - 0.04
+        adv_in_ms = peak_in_ms + 0.2
+
+        zero = np.zeros(96000)
+        tmps = s[int(back_in_ms * fs*duration):int(fs * adv_in_ms*duration)]
+
+        fig2, axs1 = plt.subplots(3, 1)
+        axs1[0].plot(timew, s)
+        axs1[0].set_xlabel('Samples')
+        axs1[0].set_ylabel('Original')
+        axs1[0].grid()
+        axs1[1].plot(tmps)
+        axs1[1].set_ylabel('Cutted')
+
+        news = s[tmps.shape[0] + 1:]
+        axs1[2].plot(timew[timew.shape[0] - news.shape[0]:], news)
+        axs1[2].set_ylabel('Old - cutted')
+
+        plt.show()
+
+        # cut(s=news,fs=fs,win=win,step=step)
 
         break
-
-
-
-
-
 
     t.set_postfix(dir=audio_dir)
     t.close()
 
-
-
-
     if do_plot:
+        fig1, axs = plt.subplots(2, 1)
+        axs[0].plot(f[0, :])
+        axs[0].set_xlabel('Frame no')
+        axs[0].set_ylabel(fn[0])
+        axs[1].plot(f[1, :])
+        axs[1].set_xlabel('Frame no')
+        axs[1].set_ylabel(fn[1])
+        plt.show()
+
         import plotly.graph_objects as go
         import plotly.io as pio
 
@@ -176,4 +216,5 @@ if __name__ == "__main__":
 
     plt.clf()
     plt.close()
+
     print('bye world')
