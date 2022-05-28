@@ -18,7 +18,6 @@ import pandas
 from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
 import numpy as np
-from multiprocessing import Pool, Process
 
 def plotsounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=48000, log=True,
                xlab='Time [signal]', ylab='Amplitude', title='Ticken im Original'):
@@ -133,8 +132,8 @@ def plot_energy(f,fn,filename):
     fig1.show()
 
 
-def processFolder(audiofile, df, win = 0.005, step = 0.005):
-    audiofile = os.path.join(audio_dir + audiofile)
+def processFolder(audiofile, df, audio_dir, win = 0.005, step = 0.005):
+    audiofile = os.path.join(audio_dir + "\\" + audiofile)
     fs, signal = aIO.read_audio_file(audiofile)
     ###############
     # Anlegen der Variablen
@@ -156,7 +155,7 @@ def cut_signal(f,fn, s):
     indexofpeak = d_energy.argmax()  # Wo ist das Maximum
     peak_in_ms = win * indexofpeak
     back_in_ms = peak_in_ms - 0.04
-    adv_in_ms = peak_in_ms + 0.2
+    adv_in_ms = peak_in_ms + 0.1
     back_in_sample = int(fs * back_in_ms)
     adv_in_sample = int(fs * adv_in_ms)
     deltasample = adv_in_sample - back_in_sample
@@ -169,18 +168,26 @@ def cut_signal(f,fn, s):
 
 if __name__ == "__main__":
 
+    #############
+    # Anlegen der Kontrollvariablen
+    ############
     print('hello World')
-    do_plot = False
-    do_test_mode = False
-    do_play = False
-    show_progress = True
+    do_plot = False # Plotten der Graphen zum Debuggen
+    do_test_mode = False # Diverse Beschleuniger
+    do_play = False # außer Betrieb
 
-    csv_exp = pd.DataFrame()
-    audio_dir = (r'data/')
+    csv_exp = pd.DataFrame() # Der Haupt-Dataframe
+    audio_dir = ''
+    if os.path.exists('H:\Messung_BluetoothMikro\Messung 3\Audios'):
+        audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
+
+
     plt.clf()
     apfel = 0
     wavfiles = listdir(audio_dir)
     win, step = 0.005, 0.005
+    p = tqdm(total=len(wavfiles), disable=False)
+    birne = 0
     # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
     # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
     # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
@@ -195,22 +202,25 @@ if __name__ == "__main__":
         apfel = 3
 
     else:
-        while apfel < 3:
-
+        while apfel < 2:
             ###############
             # Anlegen der Variablen aus den statistischen Methoden
             ###############
             for audiofile in wavfiles:
-                t = tqdm(total=1, unit="file", disable=not show_progress)
-                t.update()
                 if not '.wav' in audiofile:
                     continue
                 if '16_10_21' in audiofile:
                     continue
-                f, fn, fs, signal = processFolder(audiofile,csv_exp,win,step)
-                t.set_postfix(dir=audio_dir)
-                t.close()
-                timew = np.linspace(0., len(signal) / float(fs) , len(signal))
+                txt = ('Dies ist die {}. csvDatei').format(birne)
+                txt1 = ('Bearbeiten von {}.').format(audiofile)
+                print(txt,'\n', txt1)
+                p.update()
+                #audiofile = os.path.join(audio_dir + audiofile)
+                f, fn, fs, signal = processFolder(audiofile,csv_exp,audio_dir,win,step)
+                #tqdm.pandas(csv_exp)
+                time = np.linspace(0., len(signal) / float(fs), len(signal))
+                duration = len(signal) / float(fs)
+                timew = np.arange(0, duration - step, win)
 
                 ###############
                 # Nehme den gefunden Index und schneide signal heraus in tmps
@@ -227,15 +237,19 @@ if __name__ == "__main__":
                     except ValueError:
                         pass
 
+                if csv_exp.shape[1] >= 1000:
+                    output = audio_dir + "output.csv" + str(birne)
+                    csv_exp.to_csv(output, index=False)
+                    csv_exp = pandas.DataFrame()
+                    birne += 1
+
+
             if apfel == 0 or apfel == 2:
                 pass
                 #print('plots off')
                 #fn_plot(f,fn,signal)
                 #chroma_plot(f,fn)
                 #plot_energy(f,fn)
-
-
-
         # do_plot = True
             if apfel == 0:
                 global first_nrg
@@ -245,12 +259,12 @@ if __name__ == "__main__":
                 fig2, axs = plt.subplots(4, 1)
                 # plt.title('matplotlib.pyplot.figure() Example\n',fontsize=14, fontweight='bold')
                 axs[0].set_title(audiofile)
-                axs[0].plot(timew, olds)
+                axs[0].plot(time, olds)
                 axs[0].set_xlabel('Samples')
                 axs[0].set_ylabel('Original')
                 axs[1].plot(tmps)
                 axs[1].set_ylabel('Ausgeschnitten')
-                axs[2].plot(timew, news)
+                axs[2].plot(time, news)
                 axs[2].set_ylabel('Old - cutted')
                 axs[3].plot(f[fn.index('energy'), :])
                 axs[3].plot(first_nrg)
@@ -258,6 +272,7 @@ if __name__ == "__main__":
                 for i in axs:
                     i.grid()
                 fig2.show()
+
           #  do_plot = False
 
             #########################
@@ -288,16 +303,8 @@ if __name__ == "__main__":
     #standard_deviations = 3
     #df[df.apply(lambda x: np.abs(x - x.mean()) / x.std() < standard_deviations).all(axis=1)]
 
-
-
-    if do_plot:
-        pass
-    else:
-        pass
-        #print('Keine Plots erwünscht')
-
     plt.clf()
     plt.close()
-
+    p.close()
 
     print('bye world')
