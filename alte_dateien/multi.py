@@ -194,7 +194,7 @@ if __name__ == "__main__":
     audio_dir = ''
     if os.path.exists('H:\Messung_BluetoothMikro\Messung 3\Audios'):
         audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
-    audio_dir = r'data'
+    audio_dir = r'../data'
 
     plt.clf()
     iteration_over_file = 0
