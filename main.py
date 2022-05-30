@@ -19,6 +19,7 @@ from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
 import numpy as np
 
+
 def plotsounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=48000, log=True,
                xlab='Time [signal]', ylab='Amplitude', title='Ticken im Original'):
     """
@@ -110,7 +111,7 @@ def fn_plot(featvec, names, s):
     plt.close()
 
 
-def plot_energy(f,fn,filename):
+def plot_energy(f, fn, filename):
     energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
     d_energy = f[fn.index('delta energy'), :]
     dd_energy = np.diff(d_energy)
@@ -132,7 +133,11 @@ def plot_energy(f,fn,filename):
     fig1.show()
 
 
-def processFolder(audiofile, df, audio_dir, win = 0.005, step = 0.005):
+def processFolder(audiofile, audio_dir, win=0.005, step=0.005):
+    if not '.wav' in audiofile:
+        return
+    if '16_10_21' in audiofile:
+        return
     audiofile = os.path.join(audio_dir + "\\" + audiofile)
     fs, signal = aIO.read_audio_file(audiofile)
     ###############
@@ -145,8 +150,7 @@ def processFolder(audiofile, df, audio_dir, win = 0.005, step = 0.005):
     return f, fn, fs, signal
 
 
-
-def cut_signal(f,fn, s):
+def cut_signal(f, fn, s):
     energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
     d_energy = f[fn.index('delta energy'), :]
     dd_energy = np.diff(d_energy)
@@ -166,28 +170,39 @@ def cut_signal(f,fn, s):
 
     return olds, tmps, news
 
+
 if __name__ == "__main__":
 
     #############
     # Anlegen der Kontrollvariablen
     ############
     print('hello World')
-    do_plot = False # Plotten der Graphen zum Debuggen
-    do_test_mode = False # Diverse Beschleuniger
-    do_play = False # außer Betrieb
+    do_plot = False  # Plotten der Graphen zum Debuggen
+    do_test_mode = True  # Diverse Beschleuniger
+    do_play = False  # außer Betrieb
 
-    csv_exp = pd.DataFrame() # Der Haupt-Dataframe
+    csv_exp = []  # Der Haupt-Dataframe
+    zeilennamen = []
     audio_dir = ''
-    if os.path.exists('H:\Messung_BluetoothMikro\Messung 3\Audios'):
-        audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
-
+    if do_test_mode:
+        audio_dir = r'data'
+    else:
+        if os.path.exists('H:\Messung_BluetoothMikro\Messung 3\Audios'):
+            audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
 
     plt.clf()
-    apfel = 0
+    iteration_over_file = 0
+    anzahl_bearbeitet = 0
     wavfiles = listdir(audio_dir)
+    wavfiles = wavfiles[:400]
+    anzahl = len(wavfiles)
+    anzahlnochnicht = anzahl
+    csvlength = 3  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
+    ###############
+    # Anlegen der Variablen aus den statistischen Methoden
+    ###############
     win, step = 0.005, 0.005
-    p = tqdm(total=len(wavfiles), disable=False)
-    birne = 0
+
     # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
     # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
     # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
@@ -195,116 +210,84 @@ if __name__ == "__main__":
     # Untersuchen des Signals und Fenstern
     ############
 
-    if do_test_mode:
-        csv_exp = pandas.read_csv(audio_dir + "csv.csv")
-        csv_exp.set_index('Unnamed: 0')
-        csv_exp = csv_exp.drop(columns=['Unnamed: 0'])
-        apfel = 3
+    import time
+    from joblib import Parallel, delayed
 
-    else:
-        while apfel < 2:
-            ###############
-            # Anlegen der Variablen aus den statistischen Methoden
-            ###############
-            for audiofile in wavfiles:
-                if not '.wav' in audiofile:
-                    continue
-                if '16_10_21' in audiofile:
-                    continue
-                txt = ('Dies ist die {}. csvDatei').format(birne)
-                txt1 = ('Bearbeiten von {}.').format(audiofile)
-                print(txt,'\n', txt1)
-                p.update()
-                #audiofile = os.path.join(audio_dir + audiofile)
-                f, fn, fs, signal = processFolder(audiofile,csv_exp,audio_dir,win,step)
-                #tqdm.pandas(csv_exp)
-                time = np.linspace(0., len(signal) / float(fs), len(signal))
-                duration = len(signal) / float(fs)
-                timew = np.arange(0, duration - step, win)
+    """
+    start_time = time.perf_counter()
+    (result) = Parallel(n_jobs=25)(delayed(processFolder)(audiofile, audio_dir,win,step) for audiofile in wavfiles)
+    finish_time = time.perf_counter()
+    print(f"Program finished in {finish_time - start_time} seconds")
+    print(result)
+    """
+    for audiofile in wavfiles:
+        if not '.wav' in audiofile:
+            continue
+        if '16_10_21' in audiofile:
+            continue
+        anzahl_bearbeitet += 1
+        anzahlnochnicht -= 1
+        iteration_over_file = 0
 
-                ###############
-                # Nehme den gefunden Index und schneide signal heraus in tmps
-                ###############
-                olds, tmps, news = cut_signal(f, fn, signal)
-                spaltenname = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(apfel)
-                ## noch besser sortieren??
+        while iteration_over_file < 2:
+            txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
+                                                                               anzahl,
+                                                                               iteration_over_file)
+            txt1 = ('Bearbeiten von {}.').format(audiofile)
+            print(txt, '\n', txt1)
+            f, fn, fs, signal = processFolder(audiofile, audio_dir, win, step)
+            time = np.linspace(0., len(signal) / float(fs), len(signal))
+            duration = len(signal) / float(fs)
+            timew = np.arange(0, duration - step, win)
+
+            ###############
+            # Nehme den gefunden Index und schneide signal heraus in tmps
+            ###############
+            olds, tmps, news = cut_signal(f, fn, signal)
+            zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
+            zeilennamen.append(zeile)
+
+            try:
+                csv_exp.append(tmps)
+            except ValueError:
                 try:
-                    csv_exp[spaltenname] = tmps
+                    angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
+
+                    csv_exp.append(angepasst)
                 except ValueError:
-                    try:
-                        angepasst = np.pad(tmps,[csv_exp.shape[0]-tmps.shape[0],0],'constant')
-                        csv_exp[spaltenname] = angepasst
-                    except ValueError:
-                        pass
+                    pass
 
-                if csv_exp.shape[1] >= 1000:
-                    output = audio_dir + "output.csv" + str(birne)
-                    csv_exp.to_csv(output, index=False)
-                    csv_exp = pandas.DataFrame()
-                    birne += 1
+            if len(csv_exp) >= csvlength * 2:
+                outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
+                df = pd.DataFrame(csv_exp, index=zeilennamen)
+                try:
+                    output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                    df.to_csv(output, index=True)
+                except PermissionError:
+                    outn = 'io_hand' + outn
+                    output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                    df.to_csv(output, index=True)
 
-
-            if apfel == 0 or apfel == 2:
-                pass
-                #print('plots off')
-                #fn_plot(f,fn,signal)
-                #chroma_plot(f,fn)
-                #plot_energy(f,fn)
-        # do_plot = True
-            if apfel == 0:
-                global first_nrg
-                first_nrg =  f[fn.index('energy'), :]
-
-            if do_plot and apfel == 4 :
-                fig2, axs = plt.subplots(4, 1)
-                # plt.title('matplotlib.pyplot.figure() Example\n',fontsize=14, fontweight='bold')
-                axs[0].set_title(audiofile)
-                axs[0].plot(time, olds)
-                axs[0].set_xlabel('Samples')
-                axs[0].set_ylabel('Original')
-                axs[1].plot(tmps)
-                axs[1].set_ylabel('Ausgeschnitten')
-                axs[2].plot(time, news)
-                axs[2].set_ylabel('Old - cutted')
-                axs[3].plot(f[fn.index('energy'), :])
-                axs[3].plot(first_nrg)
-
-                for i in axs:
-                    i.grid()
-                fig2.show()
-
-          #  do_plot = False
-
-            #########################
-            # Überprüfen ob das geschnittene Signal mehr als starkes Rauschen ist
-            #########################
-            #energy_gesamt = np.sum(signal**2)/len(signal)
-            #tmps_gesamt = np.sum(tmps ** 2)/len(tmps)
-            #diff = tmps_gesamt - energy_gesamt
-           # csv_exp.describe()
-
-            #txt = "{}. Durchgang:\n" +  "Energie gesamt:\t {}\n" + "Tickenergie gesamt:\t {}\n" +"Differenz:\t {}\n"
-            #print(txt.format(apfel+1, energy_gesamt, tmps_gesamt, diff))
+                df = pd.DataFrame()
+                csv_exp, zeilennamen = [], []
 
             #########################
             # Setzen vor Rekursion Ende
             #########################
 
             signal = news.copy()
-            apfel += 1
+            iteration_over_file += 1
 
             #########################
             # achtung while Schleife ende
             #########################
 
-        #break
+        # break
 
-
-    #standard_deviations = 3
-    #df[df.apply(lambda x: np.abs(x - x.mean()) / x.std() < standard_deviations).all(axis=1)]
+    # standard_deviations = 3
+    # df[df.apply(lambda x: np.abs(x - x.mean()) / x.std() < standard_deviations).all(axis=1)]
 
     plt.clf()
     plt.close()
-    p.close()
 
     print('bye world')
