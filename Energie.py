@@ -28,7 +28,7 @@ if os.path.exists('H:\Messung_BluetoothMikro\Messung 3\Audios'):
 file_list = os.listdir(path_audio)
 file_list = file_list[100:9000]
 number_of_files = len(file_list)
-p = tqdm(max_value=number_of_files, disable=False)
+#p = tqdm(max_value=number_of_files, disable=False)
 
 print(number_of_files)
 energie = np.zeros(number_of_files)
@@ -40,8 +40,8 @@ for idx in range(len(file_list)):
     # Berechnung
     signal_2 = data**2
     energie[idx] = signal_2.sum()
-    p.update(1)
-p.close()
+    #p.update(1)
+#p.close()
 print('Fertig:')
 
 #%%
