@@ -1,5 +1,11 @@
 # @Author Mirko Matosin
 # @Date 14.02.2022
+#
+
+
+# fft anschauen. clustern, standardisieren, normalisieren
+# isolation forest
+# db scan
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -85,6 +91,8 @@ def getwav_fromfolder(wavdir, do_test=False):
 
     return wavfiles, df
 
+def square(x):
+    return x**2
 
 def chroma_plot(featvec, names):
     fig300, scat = plt.subplots(12, 1)
@@ -184,6 +192,7 @@ if __name__ == "__main__":
     csv_exp = []  # Der Haupt-Dataframe
     zeilennamen = []
     audio_dir = ''
+
     if do_test_mode:
         audio_dir = r'data'
     else:
@@ -191,6 +200,9 @@ if __name__ == "__main__":
             audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
 
     plt.clf()
+
+    duration = 0
+    timew = 0
     iteration_over_file = 0
     anzahl_bearbeitet = 0
     wavfiles = listdir(audio_dir)
@@ -201,6 +213,7 @@ if __name__ == "__main__":
     ###############
     # Anlegen der Variablen aus den statistischen Methoden
     ###############
+
     win, step = 0.005, 0.005
 
     # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
@@ -220,74 +233,123 @@ if __name__ == "__main__":
     print(f"Program finished in {finish_time - start_time} seconds")
     print(result)
     """
-    for audiofile in wavfiles:
-        if not '.wav' in audiofile:
-            continue
-        if '16_10_21' in audiofile:
-            continue
-        anzahl_bearbeitet += 1
-        anzahlnochnicht -= 1
-        iteration_over_file = 0
 
-        while iteration_over_file < 2:
-            txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
-                                                                               anzahl,
-                                                                               iteration_over_file)
-            txt1 = ('Bearbeiten von {}.').format(audiofile)
-            print(txt, '\n', txt1)
-            f, fn, fs, signal = processFolder(audiofile, audio_dir, win, step)
-            time = np.linspace(0., len(signal) / float(fs), len(signal))
-            duration = len(signal) / float(fs)
-            timew = np.arange(0, duration - step, win)
+    if not do_test_mode:
+        for audiofile in wavfiles:
+            if not '.wav' in audiofile:
+                continue
+            if '16_10_21' in audiofile:
+                continue
+            anzahl_bearbeitet += 1
+            anzahlnochnicht -= 1
+            iteration_over_file = 0
 
-            ###############
-            # Nehme den gefunden Index und schneide signal heraus in tmps
-            ###############
-            olds, tmps, news = cut_signal(f, fn, signal)
-            zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
-            zeilennamen.append(zeile)
+            while iteration_over_file < 2:
+                txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
+                                                                                   anzahl,
+                                                                                   iteration_over_file)
+                txt1 = ('Bearbeiten von {}.').format(audiofile)
+                print(txt, '\n', txt1)
+                f, fn, fs, signal = processFolder(audiofile, audio_dir, win, step)
+                time = np.linspace(0., len(signal) / float(fs), len(signal))
+                duration = len(signal) / float(fs)
+                timew = np.arange(0, duration - step, win)
 
-            try:
-                csv_exp.append(tmps)
-            except ValueError:
+                ###############
+                # Nehme den gefunden Index und schneide signal heraus in tmps
+                ###############
+                olds, tmps, news = cut_signal(f, fn, signal)
+                zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
+                zeilennamen.append(zeile)
+
                 try:
-                    angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
-
-                    csv_exp.append(angepasst)
+                    csv_exp.append(tmps)
                 except ValueError:
-                    pass
+                    try:
+                        angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
+                        csv_exp.append(angepasst)
+                    except ValueError:
+                        pass
 
-            if len(csv_exp) >= csvlength * 2:
-                outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
-                df = pd.DataFrame(csv_exp, index=zeilennamen)
-                try:
-                    output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                    df.to_csv(output, index=True)
-                except PermissionError:
-                    outn = 'io_hand' + outn
-                    output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                    df.to_csv(output, index=True)
+                if len(csv_exp) >= csvlength * 2:
+                    outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
+                    df = pd.DataFrame(csv_exp, index=zeilennamen)
+                    if not do_test_mode:
+                            try:
+                                output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                                df.to_csv(output, index=True)
+                            except PermissionError:
+                                outn = 'io_hand' + outn
+                                output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                                df.to_csv(output, index=True)
+                            df = pd.DataFrame()
+                            csv_exp, zeilennamen = [], []
 
-                df = pd.DataFrame()
-                csv_exp, zeilennamen = [], []
+                #########################
+                # Setzen vor Rekursion Ende
+                #########################
 
-            #########################
-            # Setzen vor Rekursion Ende
-            #########################
+                signal = news.copy()
+                iteration_over_file += 1
 
-            signal = news.copy()
-            iteration_over_file += 1
+                #########################
+                # achtung while Schleife ende
+                #########################
 
-            #########################
-            # achtung while Schleife ende
-            #########################
+            # break
 
-        # break
+    if do_test_mode:
+        try:
+            dft = pd.read_csv('test.csv')
+        except:
+            dft = pd.DataFrame(csv_exp, index=zeilennamen).transpose(copy=True)
+        # Pro Tick:
+        dft_nrg_proTick = dft.apply(lambda x: x ** 2 / (2 ** 15))
+        statsdf_proTick = dft_nrg_proTick.describe()  # tmp = pd.DataFrame(dft.median())
+        meddf_proTick = pd.DataFrame(dft_nrg_proTick.median()).transpose()
+        # Pro Sample
 
-    # standard_deviations = 3
+        dft_nrg_proS= dft_nrg_proTick.T
+        statsdf_proS= statsdf_proTick.T
+        meddf_proS= meddf_proTick.T
+        timew = np.arange(0, 6720, 1)
+        #fig,ax = plt.subplots(2,1)
+        #ax[0].plot(yaxis = dft.iloc[:,3], xaxis = timew)
+        #fig.show()
+        #proTick = pd.concat([statsdf_proTick, meddf_proTick], keys=[ 'stats', 'median'], axis=1, join='outer')
+        #proSam = pd.concat([statsdf_proS, meddf_proS], keys=[ 'stats', 'median'], axis=1, join='outer')
+        #print(proTick,proSam)
+        #for col in dft_nrg_proTick.columns:
+        #    dft_nrg_proTick[col].plot()
+        #    plt.title(col)
+        #    plt.show()
+        for col in dft_nrg_proTick.columns:
+            fig, ax = plt.subplots(3, 1)
+            dft[col].plot(subplots=True,ax=ax[0])
+
+            dft_nrg_proTick[col].plot(subplots=True,ax=ax[1])
+            dft_nrg_proTick[col].plot.hist(subplots=True, ax=ax[2])
+
+
+            fig.tight_layout()
+            fig.suptitle(col)
+            #fig.supxlabel('Time in Samples')
+            ax[0].set_ylabel = 'Signal'
+            ax[1].set_ylabel = 'genormte Energie'
+            ax[2].set_ylabel = 'Häufigkeiten'
+            ax[0].set_xlabel = ''
+            ax[1].set_xlabel = 'Zeit in Samples'
+            ax[2].set_xlabel = ''
+            fig.show()
+        # standard_deviations = 3
     # df[df.apply(lambda x: np.abs(x - x.mean()) / x.std() < standard_deviations).all(axis=1)]
 
     plt.clf()
     plt.close()
 
     print('bye world')
+
+
+'''
+The join() method inserts column(s) from another DataFrame, or Series.
+'''
