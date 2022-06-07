@@ -24,9 +24,10 @@ import pandas
 from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
 import numpy as np
+from tqdm.notebook import tqdm
 
 
-def plotsounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=48000, log=True,
+def plotsounds(ax, data, abszisse, param_dict=None, filename='N/A', samplerate=48000, log=True,
                xlab='Time [signal]', ylab='Amplitude', title='Ticken im Original'):
     """
     Plottet eine Spalte oder ein Vektor in Timedomain
@@ -38,6 +39,8 @@ def plotsounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=480
     :param ylab: Label auf Ordinate
     :return:
     """
+    if param_dict is None:
+        param_dict = {}
     out = ax.plot(abszisse, data, label=filename, **param_dict)
     ax.legend(loc='upper right')
     ax.grid(True)
@@ -51,9 +54,6 @@ def plotsounds(ax, data, abszisse, param_dict={}, filename='N/A', samplerate=480
     ax.set_ylabel(ylab)
     ax.set_title(title)
     return out
-
-
-from tqdm.notebook import tqdm
 
 
 def getwav_fromfolder(wavdir, do_test=False):
@@ -91,8 +91,10 @@ def getwav_fromfolder(wavdir, do_test=False):
 
     return wavfiles, df
 
+
 def square(x):
     return x**2
+
 
 def chroma_plot(featvec, names):
     fig300, scat = plt.subplots(12, 1)
