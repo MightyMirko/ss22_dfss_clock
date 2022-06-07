@@ -50,6 +50,7 @@ plt.show()
 
 ''' weitere Analysen '''
 
+# Berechnung des Prognosebereichs
 data = energie
 N = np.size(data)
 data_mean = np.mean(data)
@@ -67,6 +68,7 @@ print('Prognosewert:', round(x_prog_min, 4), Einheit_unit, '< x <=', round(x_pro
 
 #%%
 
+''' Plots '''
 N = len(energie)
 x = np.arange(N)
 y = np.ones(N)
