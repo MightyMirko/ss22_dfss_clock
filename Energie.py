@@ -20,13 +20,17 @@ from scipy.fft import fft, fftfreq
 from scipy.signal import windows
 from scipy.signal import medfilt
 from scipy.stats import norm, t, chi2, f
+from tqdm.notebook import tqdm
 
 #%%
-
-path_audio = r'data/Neuer Ordner'
+if os.path.exists('H:\Messung_BluetoothMikro\Messung 3\Audios'):
+    path_audio = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
 file_list = os.listdir(path_audio)
-
+file_list = file_list[100:9000]
 number_of_files = len(file_list)
+p = tqdm(max_value=number_of_files, disable=False)
+
+print(number_of_files)
 energie = np.zeros(number_of_files)
 
 # Energie bestimmen absolut
@@ -36,15 +40,44 @@ for idx in range(len(file_list)):
     # Berechnung
     signal_2 = data**2
     energie[idx] = signal_2.sum()
+    p.update(1)
+p.close()
+print('Fertig:')
 
+#%%
 # plot Energie der Signale
+plt.rcParams['figure.dpi'] = 300
+# plt.rcParams['interactive'] = True
+plt.rcParams['figure.figsize'] = (12, 9)
+
 plt.figure()
+#plt.scatter(x=,y=energie)
+#plt.xlim(xmin=20, xmax=30)
 plt.plot(energie)
+
 plt.grid(True)
 plt.xlabel('Anzahl Aufnahmen')
 plt.ylabel('Energie')
 plt.title('absolute Energie der Aufnahmen')
 plt.show()
+
+#%%
+X = energie
+h_abs, x = np.histogram(X, bins=1000)
+
+ax = plt.figure(figsize=(6, 4)).subplots(1, 1)
+ax.hist(X, x , histtype='bar', weights=np.ones(X.shape)/X.shape, rwidth=0.9, cumulative=False)
+ax.grid(True, which= 'both', axis='both', linestyle='--')
+ax.set_xlabel('Energie')
+ax.set_ylabel('Häufigkeit h(d)')
+#ax.set_ylim(top=0.001)
+#ax.set_xlim(left=10, right=1000)
+
+ax.set_title('Häufigkeitsverteilung')
+plt.tight_layout()
+
+plt.show()
+
 
 #%%
 
@@ -59,7 +92,7 @@ data_std = np.std(data, ddof = 1)
 Einheit_unit = ''
 
 # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
-gamma = 0.9973
+gamma = 0.95
 c1 = t.ppf((1 - gamma) / 2, N - 1)
 c2 = t.ppf((1 + gamma) / 2, N - 1)
 x_prog_min = data_mean + c1 * data_std * np.sqrt(1 + 1 / N)
@@ -87,3 +120,28 @@ plt.plot(x, y*np.median(energie))
 plt.plot(x, y*np.mean(energie))
 plt.grid(True)
 plt.show()
+
+#%%
+plt.figure()
+plt.scatter(x, energie)
+plt.grid(True)
+plt.xlabel('Anzahl Aufnahmen')
+plt.ylabel('Energie')
+plt.title('absolute Energie der Aufnahmen')
+#plt.show()
+#%%
+birne = np.max(energie)
+apfel = np.argmax(energie)
+index = file_list[int(apfel)]
+
+#%%
+energie[index]=0
+#%%
+# plot Prognosebereich
+#plt.plot(x, y*x_prog_min)
+plt.plot(x, y*x_prog_max)
+plt.plot(x, y*np.median(energie))
+plt.plot(x, y*np.mean(energie))
+plt.grid(True)
+plt.show()
+
