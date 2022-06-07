@@ -114,7 +114,7 @@ plt.ylabel('Energie')
 plt.title('absolute Energie der Aufnahmen')
 
 # plot Prognosebereich
-plt.plot(x, y*x_prog_min)
+#plt.plot(x, y*x_prog_min)
 plt.plot(x, y*x_prog_max)
 plt.plot(x, y*np.median(energie))
 plt.plot(x, y*np.mean(energie))
