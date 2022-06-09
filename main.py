@@ -9,10 +9,6 @@
 
 import matplotlib.pyplot as plt
 import pandas as pd
-
-plt.rcParams['figure.dpi'] = 150
-# plt.rcParams['interactive'] = True
-plt.rcParams['figure.figsize'] = (12, 9)
 from scipy.io import wavfile
 from os.path import join as pjoin
 from os import listdir
@@ -20,11 +16,16 @@ from os import listdir
 import tqdm
 import os
 
-import pandas
 from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
 import numpy as np
 from tqdm.notebook import tqdm
+###################
+# Anlegen globaler Var
+###################
+plt.rcParams['figure.dpi'] = 150
+# plt.rcParams['interactive'] = True
+plt.rcParams['figure.figsize'] = (12, 9)
 
 
 def plotsounds(ax, data, abszisse, param_dict=None, filename='N/A', samplerate=48000, log=True,
@@ -32,6 +33,11 @@ def plotsounds(ax, data, abszisse, param_dict=None, filename='N/A', samplerate=4
     """
     Plottet eine Spalte oder ein Vektor in Timedomain
 
+    :param title:
+    :param log:
+    :param param_dict:
+    :param abszisse:
+    :param ax:
     :param data: hier kommt eine Series (Spalte Dataframe) hinein.
     :param filename: Legendenname
     :param samplerate: 96000 sind Standard. Wird für die Zeitachse genommen
@@ -93,7 +99,7 @@ def getwav_fromfolder(wavdir, do_test=False):
 
 
 def square(x):
-    return x**2
+    return x ** 2
 
 
 def chroma_plot(featvec, names):
@@ -143,21 +149,20 @@ def plot_energy(f, fn, filename):
     fig1.show()
 
 
-def processFolder(audiofile, audio_dir, win=0.005, step=0.005):
-    if not '.wav' in audiofile:
-        return
-    if '16_10_21' in audiofile:
-        return
-    audiofile = os.path.join(audio_dir + "\\" + audiofile)
-    fs, signal = aIO.read_audio_file(audiofile)
-    ###############
-    # Anlegen der Variablen
-    ###############
-    duration = len(signal) / float(fs)
-    time = np.arange(0, duration - step, win)
-    # extract short-term features using a 50msec non-overlapping windows
-    [f, fn] = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
-    return f, fn, fs, signal
+def process_folder(audiofile, audio_dir, win=0.005, step=0.005):
+    if '.wav' in audiofile:
+        if '16_10_21' in audiofile:
+            return
+        audiofile = os.path.join(audio_dir + "\\" + audiofile)
+        fs, signal = aIO.read_audio_file(audiofile)
+        ###############
+        # Anlegen der Variablen
+        ###############
+        duration = len(signal) / float(fs)
+        time = np.arange(0, duration - step, win)
+        # extract short-term features using a 50msec non-overlapping windows
+        [f, fn] = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
+        return f, fn, fs, signal
 
 
 def cut_signal(f, fn, s):
@@ -182,12 +187,21 @@ def cut_signal(f, fn, s):
 
 
 def siebwithenergy(d, wavfiles):
+    """
+    Diese Funktion bestimmt die Schwellenwerte aller Signale und erstellt eine Liste der Daten die nicht weiter bearbeiet werden sollten
+
+    :param d: wo soll der suchen
+    :param wavfiles: übergabe der zu siebenden Daten
+    :return:
+    """
     file_list = wavfiles[100:9000]
     number_of_files = len(file_list)
     # p = tqdm(total=number_of_files, disable=False)
 
     print(number_of_files)
     energie = np.zeros(number_of_files)
+
+    itemstopop = []
 
     # Energie bestimmen absolut
     for idx in range(len(file_list)):
@@ -198,8 +212,52 @@ def siebwithenergy(d, wavfiles):
         energie[idx] = signal_2.sum()
         if idx % 100 == 0:
             print(idx)
+    from scipy.stats import t
 
+    # Berechnung des Prognosebereichs
+    data = energie.copy()
+    N = np.size(data)
+    data_mean = np.mean(data)
+    data_var = np.var(data, ddof=1)
+    data_std = np.std(data, ddof=1)
+
+    Einheit_unit = 'W'
+
+    # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
+    gamma = 0.95
+
+    c1 = t.ppf((1 - gamma) / 2, N - 1)
+    c2 = t.ppf((1 + gamma) / 2, N - 1)
+    x_prog_min = data_mean + c1 * data_std * np.sqrt(1 + 1 / N)
+    x_prog_max = data_mean + c2 * data_std * np.sqrt(1 + 1 / N)
+
+    print('Prognosewert:', round(x_prog_min, 4), Einheit_unit, '< x <=', round(x_prog_max, 4), Einheit_unit)
+
+    return (x_prog_min, x_prog_max), energie
+
+
+def popSignals(itemstopop, list_topop):
+    """
+    Es müssen mehrere Schleifen sein, da ansonsten der index nicht mehr passt, wenn ich gleichzeitig poppen würde
+    :param itemstopop:
+    :param list_topop:
+    :return:
+    """
+    wavfiles = list_topop.copy()
+    for idx in range(len(wavfiles)):
+        audiofile = wavfiles[idx]
+        if not '.wav' in audiofile:
+            print(audiofile)
+            itemstopop.append(audiofile)
+        if '16_10_21' in audiofile:
+            print(audiofile)
+            itemstopop.append(audiofile)
+
+    for idx in itemstopop:
+        print(idx)
+        wavfiles.pop(wavfiles.index(idx))
     print('Fertig:')
+    return wavfiles
 
 
 if __name__ == "__main__":
@@ -241,12 +299,6 @@ if __name__ == "__main__":
     #
     ############
 
-
-
-
-
-
-
     win, step = 0.005, 0.005
 
     # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
@@ -255,9 +307,6 @@ if __name__ == "__main__":
     #############
     # Untersuchen des Signals und Fenstern
     ############
-
-    import time
-    from joblib import Parallel, delayed
 
     """
     start_time = time.perf_counter()
@@ -283,7 +332,7 @@ if __name__ == "__main__":
                                                                                    iteration_over_file)
                 txt1 = ('Bearbeiten von {}.').format(audiofile)
                 print(txt, '\n', txt1)
-                f, fn, fs, signal = processFolder(audiofile, audio_dir, win, step)
+                f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
                 time = np.linspace(0., len(signal) / float(fs), len(signal))
                 duration = len(signal) / float(fs)
                 timew = np.arange(0, duration - step, win)
@@ -309,15 +358,15 @@ if __name__ == "__main__":
                     outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
                     df = pd.DataFrame(csv_exp, index=zeilennamen)
                     if not do_test_mode:
-                            try:
-                                output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                                df.to_csv(output, index=True)
-                            except PermissionError:
-                                outn = 'io_hand' + outn
-                                output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                                df.to_csv(output, index=True)
-                            df = pd.DataFrame()
-                            csv_exp, zeilennamen = [], []
+                        try:
+                            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                            df.to_csv(output, index=True)
+                        except PermissionError:
+                            outn = 'io_hand' + outn
+                            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                            df.to_csv(output, index=True)
+                        df = pd.DataFrame()
+                        csv_exp, zeilennamen = [], []
 
                 #########################
                 # Setzen vor Rekursion Ende
@@ -343,31 +392,30 @@ if __name__ == "__main__":
         meddf_proTick = pd.DataFrame(dft_nrg_proTick.median()).transpose()
         # Pro Sample
 
-        dft_nrg_proS= dft_nrg_proTick.T
-        statsdf_proS= statsdf_proTick.T
-        meddf_proS= meddf_proTick.T
+        dft_nrg_proS = dft_nrg_proTick.T
+        statsdf_proS = statsdf_proTick.T
+        meddf_proS = meddf_proTick.T
         timew = np.arange(0, 6720, 1)
-        #fig,ax = plt.subplots(2,1)
-        #ax[0].plot(yaxis = dft.iloc[:,3], xaxis = timew)
-        #fig.show()
-        #proTick = pd.concat([statsdf_proTick, meddf_proTick], keys=[ 'stats', 'median'], axis=1, join='outer')
-        #proSam = pd.concat([statsdf_proS, meddf_proS], keys=[ 'stats', 'median'], axis=1, join='outer')
-        #print(proTick,proSam)
-        #for col in dft_nrg_proTick.columns:
+        # fig,ax = plt.subplots(2,1)
+        # ax[0].plot(yaxis = dft.iloc[:,3], xaxis = timew)
+        # fig.show()
+        # proTick = pd.concat([statsdf_proTick, meddf_proTick], keys=[ 'stats', 'median'], axis=1, join='outer')
+        # proSam = pd.concat([statsdf_proS, meddf_proS], keys=[ 'stats', 'median'], axis=1, join='outer')
+        # print(proTick,proSam)
+        # for col in dft_nrg_proTick.columns:
         #    dft_nrg_proTick[col].plot()
         #    plt.title(col)
         #    plt.show()
         for col in dft_nrg_proTick.columns:
             fig, ax = plt.subplots(3, 1)
-            dft[col].plot(subplots=True,ax=ax[0])
+            dft[col].plot(subplots=True, ax=ax[0])
 
-            dft_nrg_proTick[col].plot(subplots=True,ax=ax[1])
+            dft_nrg_proTick[col].plot(subplots=True, ax=ax[1])
             dft_nrg_proTick[col].plot.hist(subplots=True, ax=ax[2])
-
 
             fig.tight_layout()
             fig.suptitle(col)
-            #fig.supxlabel('Time in Samples')
+            # fig.supxlabel('Time in Samples')
             ax[0].set_ylabel = 'Signal'
             ax[1].set_ylabel = 'genormte Energie'
             ax[2].set_ylabel = 'Häufigkeiten'
@@ -382,7 +430,6 @@ if __name__ == "__main__":
     plt.close()
 
     print('bye world')
-
 
 '''
 The join() method inserts column(s) from another DataFrame, or Series.
