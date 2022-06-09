@@ -356,15 +356,22 @@ if __name__ == "__main__":
                 zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
                 zeilennamen.append(zeile)
 
+                ################################################
+                # Versuche das geschnittene Signal in die csv zu drücken.. Wenn es nicht, da nicht gleich lang so passt
+                # das Programm das geschnittene Signal an und füllt es mit einem konstanten Wert..
+                #
+                ################################################
                 try:
                     csv_exp.append(tmps)
                 except ValueError:
-                    try:
-                        # TODO:
-                        angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
-                        csv_exp.append(angepasst)
-                    except ValueError:
-                        pass
+                    print('Diese Datei muss näher untersucht werden:\t' + zeile)
+                    # Tatsächlich habe ich die Dateien bereits verworfen gehabt.. aber dann doch wieder eingebaut..
+                    # try:
+                    #    # TODO: erledigt..
+                    #    angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
+                    #    csv_exp.append(angepasst)
+                    # except ValueError:
+                    #    pass
 
                 if len(csv_exp) >= csvlength * 2:
                     outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
