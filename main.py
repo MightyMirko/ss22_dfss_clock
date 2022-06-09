@@ -152,19 +152,26 @@ def plot_energy(f, fn, filename):
 
 
 def process_folder(audiofile, audio_dir, win=0.005, step=0.005):
-    if '.wav' in audiofile:
-        if '16_10_21' in audiofile:
-            return
-        audiofile = os.path.join(audio_dir + "\\" + audiofile)
-        fs, signal = aIO.read_audio_file(audiofile)
-        ###############
-        # Anlegen der Variablen
-        ###############
-        duration = len(signal) / float(fs)
-        time = np.arange(0, duration - step, win)
-        # extract short-term features using a 50msec non-overlapping windows
-        [f, fn] = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
-        return f, fn, fs, signal
+    """
+
+    :param audiofile: muss sanitized sein
+    :param audio_dir: muss sanitized sein
+    :param win:
+    :param step:
+    :return:
+    """
+
+    audiofile = os.path.join(audio_dir + "\\" + audiofile)
+    fs, signal = aIO.read_audio_file(audiofile)
+    ###############
+    # Anlegen der Variablen
+    ###############
+    duration = len(signal) / float(fs)
+    time = np.arange(0, duration - step, win)
+    # extract short-term features using a 50msec non-overlapping windows
+    [f, fn] = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
+
+    return f, fn, fs, signal
 
 
 def cut_signal(f, fn, s):
@@ -318,8 +325,8 @@ if __name__ == "__main__":
     # Untersuchen des Signals und Fenstern
     ################################################
     win, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
-
-    if not do_test_mode:
+    # if not do_test_mode:
+    if do_test_mode:
         for audiofile in wavfiles:
             anzahl_bearbeitet += 1
             anzahlnochnicht -= 1
@@ -330,7 +337,11 @@ if __name__ == "__main__":
                                                                                    anzahl,
                                                                                    iteration_over_file)
                 txt1 = ('Bearbeiten von {}.').format(audiofile)
+
                 print(txt, '\n', txt1)
+                ################################################
+                # Rolling Window
+                ################################################
                 f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
                 time = np.linspace(0., len(signal) / float(fs), len(signal))
                 duration = len(signal) / float(fs)
