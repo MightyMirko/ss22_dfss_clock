@@ -305,7 +305,7 @@ if __name__ == "__main__":
     # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
-    csvlength = 3  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
+    csvlength = 300  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
 
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
@@ -321,6 +321,8 @@ if __name__ == "__main__":
         if sieb_energien.loc[x, "GesamtEnergie"] > progmax:
             sieb_energien.drop(x, inplace=True)
 
+    sieb_energien.to_csv('sieb.csv', index=True)
+    wavfiles = sieb_energien.index.values
     ################################################
     # Untersuchen des Signals und Fenstern
     ################################################
@@ -335,7 +337,7 @@ if __name__ == "__main__":
             while iteration_over_file < 2:
                 txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
                                                                                    anzahl,
-                                                                                   iteration_over_file)
+                                                                                   iteration_over_file + 1)
                 txt1 = ('Bearbeiten von {}.').format(audiofile)
 
                 print(txt, '\n', txt1)
