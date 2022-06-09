@@ -215,8 +215,8 @@ def get_energies(d, wavfiles):
         # Berechnung
         signal_2 = data ** 2
         energie[idx] = signal_2.sum()
-        if idx % 100 == 0:
-            print(idx)
+        if idx % int(number_of_files / 10) == 0:
+            print(str(idx) + " von " + str(number_of_files))
     df = pandas.DataFrame(data=energie, index=file_list, columns={'GesamtEnergie'})
     return df
 
@@ -305,8 +305,6 @@ if __name__ == "__main__":
     ################################################
 
     gesamtenergien = get_energies(audio_dir, wavfiles)
-    # gesamtenergien.dropna(inplace=True)
-    # gesamtenergien.drop_duplicates(inplace=True)
     sieb_energien = gesamtenergien.drop_duplicates()
     sieb_energien = sieb_energien.dropna()
 
@@ -323,67 +321,64 @@ if __name__ == "__main__":
 
     if not do_test_mode:
         for audiofile in wavfiles:
-            if '.wav' in audiofile:
-                if '16_10_21' in audiofile:
-                    continue
-                anzahl_bearbeitet += 1
-                anzahlnochnicht -= 1
-                iteration_over_file = 0
+            anzahl_bearbeitet += 1
+            anzahlnochnicht -= 1
+            iteration_over_file = 0
 
-                while iteration_over_file < 2:
-                    txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
-                                                                                       anzahl,
-                                                                                       iteration_over_file)
-                    txt1 = ('Bearbeiten von {}.').format(audiofile)
-                    print(txt, '\n', txt1)
-                    f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
-                    time = np.linspace(0., len(signal) / float(fs), len(signal))
-                    duration = len(signal) / float(fs)
-                    timew = np.arange(0, duration - step, win)
+            while iteration_over_file < 2:
+                txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
+                                                                                   anzahl,
+                                                                                   iteration_over_file)
+                txt1 = ('Bearbeiten von {}.').format(audiofile)
+                print(txt, '\n', txt1)
+                f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
+                time = np.linspace(0., len(signal) / float(fs), len(signal))
+                duration = len(signal) / float(fs)
+                timew = np.arange(0, duration - step, win)
 
-                    ################################################
-                    # Nehme den gefunden Index und schneide signal heraus in tmps
-                    ################################################
-                    olds, tmps, news = cut_signal(f, fn, signal)
-                    zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
-                    zeilennamen.append(zeile)
+                ################################################
+                # Nehme den gefunden Index und schneide signal heraus in tmps
+                ################################################
+                olds, tmps, news = cut_signal(f, fn, signal)
+                zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
+                zeilennamen.append(zeile)
 
+                try:
+                    csv_exp.append(tmps)
+                except ValueError:
                     try:
-                        csv_exp.append(tmps)
+                        # TODO:
+                        angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
+                        csv_exp.append(angepasst)
                     except ValueError:
+                        pass
+
+                if len(csv_exp) >= csvlength * 2:
+                    outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
+                    df = pd.DataFrame(csv_exp, index=zeilennamen)
+                    if not do_test_mode:
                         try:
-                            # TODO:
-                            angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
-                            csv_exp.append(angepasst)
-                        except ValueError:
-                            pass
+                            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                            df.to_csv(output, index=True)
+                        except PermissionError:
+                            outn = 'io_hand' + outn
+                            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                            df.to_csv(output, index=True)
+                        df = pd.DataFrame()
+                        csv_exp, zeilennamen = [], []
 
-                    if len(csv_exp) >= csvlength * 2:
-                        outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
-                        df = pd.DataFrame(csv_exp, index=zeilennamen)
-                        if not do_test_mode:
-                            try:
-                                output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                                df.to_csv(output, index=True)
-                            except PermissionError:
-                                outn = 'io_hand' + outn
-                                output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                                df.to_csv(output, index=True)
-                            df = pd.DataFrame()
-                            csv_exp, zeilennamen = [], []
+                #########################
+                # Setzen vor Rekursion Ende
+                #########################
 
-                    #########################
-                    # Setzen vor Rekursion Ende
-                    #########################
+                signal = news.copy()
+                iteration_over_file += 1
 
-                    signal = news.copy()
-                    iteration_over_file += 1
+                #########################
+                # achtung while Schleife ende
+                #########################
 
-                    #########################
-                    # achtung while Schleife ende
-                    #########################
-
-                # break
+            # break
 
     if do_test_mode:
         try:
