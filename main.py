@@ -1,4 +1,4 @@
-# @Author Mirko Matosin
+# @Author Mirko Matosin und Alexander Wünstel
 # @Date 14.02.2022
 #
 
@@ -7,19 +7,21 @@
 # isolation forest
 # db scan
 
-import matplotlib.pyplot as plt
-import pandas as pd
-from scipy.io import wavfile
-from os.path import join as pjoin
-from os import listdir
-
-import tqdm
 import os
+from os import listdir
+from os.path import join as pjoin
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas
+import pandas as pd
+import tqdm
 from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
-import numpy as np
+from scipy.io import wavfile
+from scipy.stats import t
 from tqdm.notebook import tqdm
+
 ###################
 # Anlegen globaler Var
 ###################
@@ -186,7 +188,7 @@ def cut_signal(f, fn, s):
     return olds, tmps, news
 
 
-def siebwithenergy(d, wavfiles):
+def get_energies(d, wavfiles):
     """
     Diese Funktion bestimmt die Schwellenwerte aller Signale und erstellt eine Liste der Daten die nicht weiter bearbeiet werden sollten
 
@@ -194,10 +196,12 @@ def siebwithenergy(d, wavfiles):
     :param wavfiles: übergabe der zu siebenden Daten
     :return:
     """
-    file_list = wavfiles[100:9000]
-    number_of_files = len(file_list)
-    # p = tqdm(total=number_of_files, disable=False)
+    # try:
+    #     file_list = wavfiles[100:9000]
+    # except:
+    file_list = wavfiles
 
+    number_of_files = len(file_list)
     print(number_of_files)
     energie = np.zeros(number_of_files)
 
@@ -206,16 +210,24 @@ def siebwithenergy(d, wavfiles):
     # Energie bestimmen absolut
     for idx in range(len(file_list)):
         # einlesen
-        samplerate, data = wavfile.read(d + os.pathsep + file_list[idx])
+        fn = file_list[idx]
+        samplerate, data = wavfile.read(d + ('\\') + file_list[idx])
         # Berechnung
         signal_2 = data ** 2
         energie[idx] = signal_2.sum()
         if idx % 100 == 0:
             print(idx)
-    from scipy.stats import t
+    df = pandas.DataFrame(data=energie, index=file_list, columns={'GesamtEnergie'})
+    return df
 
-    # Berechnung des Prognosebereichs
-    data = energie.copy()
+
+def prognose(data):
+    """
+    Berechnung des Prognosebereichs
+    :param data:
+    :return:
+    """
+
     N = np.size(data)
     data_mean = np.mean(data)
     data_var = np.var(data, ddof=1)
@@ -233,153 +245,145 @@ def siebwithenergy(d, wavfiles):
 
     print('Prognosewert:', round(x_prog_min, 4), Einheit_unit, '< x <=', round(x_prog_max, 4), Einheit_unit)
 
-    return (x_prog_min, x_prog_max), energie
-
-
-def popSignals(itemstopop, list_topop):
-    """
-    Es müssen mehrere Schleifen sein, da ansonsten der index nicht mehr passt, wenn ich gleichzeitig poppen würde
-    :param itemstopop:
-    :param list_topop:
-    :return:
-    """
-    wavfiles = list_topop.copy()
-    for idx in range(len(wavfiles)):
-        audiofile = wavfiles[idx]
-        if not '.wav' in audiofile:
-            print(audiofile)
-            itemstopop.append(audiofile)
-        if '16_10_21' in audiofile:
-            print(audiofile)
-            itemstopop.append(audiofile)
-
-    for idx in itemstopop:
-        print(idx)
-        wavfiles.pop(wavfiles.index(idx))
-    print('Fertig:')
-    return wavfiles
+    return x_prog_min, x_prog_max
 
 
 if __name__ == "__main__":
 
-    #############
+    ################################################
     # Anlegen der Kontrollvariablen
-    ############
+    ################################################
     print('hello World')
     do_plot = False  # Plotten der Graphen zum Debuggen
     do_test_mode = True  # Diverse Beschleuniger
     do_play = False  # außer Betrieb
 
-    csv_exp = []  # Der Haupt-Dataframe
+    plt.clf()
+    ################################################
+    # Arbeits Variablen
+    ################################################
+    csv_exp = []  # Der exportierende
     zeilennamen = []
-    audio_dir = ''
 
+    audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
+
+    ################################################
+    # Überprüfung
+    ################################################
     if do_test_mode:
         audio_dir = r'data'
     else:
-        if os.path.exists('H:\Messung_BluetoothMikro\Messung 3\Audios'):
-            audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
-
-    plt.clf()
+        if not os.path.exists(audio_dir):
+            raise IOError
+        else:
+            audio_dir = audio_dir
+    ################################################
+    # Anlegen der Variablen und Wav-Liste
+    ################################################
 
     duration = 0
     timew = 0
     iteration_over_file = 0
     anzahl_bearbeitet = 0
-    wavfiles = listdir(audio_dir)
-    wavfiles = wavfiles[:400]
+    wavfiles = []
+    ################################################
+    # Desinfizieren der Wavliste
+    ################################################
+
+    with os.scandir(audio_dir) as it:
+        for entry in it:
+            if entry.name.endswith('.wav') and entry.is_file():
+                wavfiles.append(entry.name)
+
+    # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
     csvlength = 3  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
-    ###############
-    # Anlegen der Variablen aus den statistischen Methoden
-    ###############
-    ############
+
+    ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
-    #
-    ############
+    ################################################
 
-    win, step = 0.005, 0.005
+    gesamtenergien = get_energies(audio_dir, wavfiles)
+    # gesamtenergien.dropna(inplace=True)
+    # gesamtenergien.drop_duplicates(inplace=True)
+    sieb_energien = gesamtenergien.drop_duplicates()
+    sieb_energien = sieb_energien.dropna()
 
-    # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
-    # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
-    # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
-    #############
+    progmin, progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
+
+    for x in sieb_energien.index:
+        if sieb_energien.loc[x, "GesamtEnergie"] > progmax:
+            sieb_energien.drop(x, inplace=True)
+
+    ################################################
     # Untersuchen des Signals und Fenstern
-    ############
-
-    """
-    start_time = time.perf_counter()
-    (result) = Parallel(n_jobs=25)(delayed(processFolder)(audiofile, audio_dir,win,step) for audiofile in wavfiles)
-    finish_time = time.perf_counter()
-    print(f"Program finished in {finish_time - start_time} seconds")
-    print(result)
-    """
+    ################################################
+    win, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
 
     if not do_test_mode:
         for audiofile in wavfiles:
-            if not '.wav' in audiofile:
-                continue
-            if '16_10_21' in audiofile:
-                continue
-            anzahl_bearbeitet += 1
-            anzahlnochnicht -= 1
-            iteration_over_file = 0
+            if '.wav' in audiofile:
+                if '16_10_21' in audiofile:
+                    continue
+                anzahl_bearbeitet += 1
+                anzahlnochnicht -= 1
+                iteration_over_file = 0
 
-            while iteration_over_file < 2:
-                txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
-                                                                                   anzahl,
-                                                                                   iteration_over_file)
-                txt1 = ('Bearbeiten von {}.').format(audiofile)
-                print(txt, '\n', txt1)
-                f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
-                time = np.linspace(0., len(signal) / float(fs), len(signal))
-                duration = len(signal) / float(fs)
-                timew = np.arange(0, duration - step, win)
+                while iteration_over_file < 2:
+                    txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
+                                                                                       anzahl,
+                                                                                       iteration_over_file)
+                    txt1 = ('Bearbeiten von {}.').format(audiofile)
+                    print(txt, '\n', txt1)
+                    f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
+                    time = np.linspace(0., len(signal) / float(fs), len(signal))
+                    duration = len(signal) / float(fs)
+                    timew = np.arange(0, duration - step, win)
 
-                ###############
-                # Nehme den gefunden Index und schneide signal heraus in tmps
-                ###############
-                olds, tmps, news = cut_signal(f, fn, signal)
-                zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
-                zeilennamen.append(zeile)
+                    ################################################
+                    # Nehme den gefunden Index und schneide signal heraus in tmps
+                    ################################################
+                    olds, tmps, news = cut_signal(f, fn, signal)
+                    zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
+                    zeilennamen.append(zeile)
 
-                try:
-                    csv_exp.append(tmps)
-                except ValueError:
                     try:
-                        # TODO:
-                        angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
-                        csv_exp.append(angepasst)
+                        csv_exp.append(tmps)
                     except ValueError:
-                        pass
-
-                if len(csv_exp) >= csvlength * 2:
-                    outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
-                    df = pd.DataFrame(csv_exp, index=zeilennamen)
-                    if not do_test_mode:
                         try:
-                            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                            df.to_csv(output, index=True)
-                        except PermissionError:
-                            outn = 'io_hand' + outn
-                            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                            df.to_csv(output, index=True)
-                        df = pd.DataFrame()
-                        csv_exp, zeilennamen = [], []
+                            # TODO:
+                            angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
+                            csv_exp.append(angepasst)
+                        except ValueError:
+                            pass
 
-                #########################
-                # Setzen vor Rekursion Ende
-                #########################
+                    if len(csv_exp) >= csvlength * 2:
+                        outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
+                        df = pd.DataFrame(csv_exp, index=zeilennamen)
+                        if not do_test_mode:
+                            try:
+                                output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                                df.to_csv(output, index=True)
+                            except PermissionError:
+                                outn = 'io_hand' + outn
+                                output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                                df.to_csv(output, index=True)
+                            df = pd.DataFrame()
+                            csv_exp, zeilennamen = [], []
 
-                signal = news.copy()
-                iteration_over_file += 1
+                    #########################
+                    # Setzen vor Rekursion Ende
+                    #########################
 
-                #########################
-                # achtung while Schleife ende
-                #########################
+                    signal = news.copy()
+                    iteration_over_file += 1
 
-            # break
+                    #########################
+                    # achtung while Schleife ende
+                    #########################
+
+                # break
 
     if do_test_mode:
         try:
