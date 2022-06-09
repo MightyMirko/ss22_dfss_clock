@@ -197,7 +197,7 @@ def cut_signal(f, fn, s):
 
 def get_energies(d, wavfiles):
     """
-    Diese Funktion bestimmt die Schwellenwerte aller Signale und erstellt eine Liste der Daten die nicht weiter bearbeiet werden sollten
+    Diese Funktion bestimmt die Schwellenwerte aller Signale und erstellt ein Dataframe
 
     :param d: wo soll der suchen
     :param wavfiles: übergabe der zu siebenden Daten
@@ -212,8 +212,6 @@ def get_energies(d, wavfiles):
     print(number_of_files)
     energie = np.zeros(number_of_files)
 
-    itemstopop = []
-
     # Energie bestimmen absolut
     for idx in range(len(file_list)):
         # einlesen
@@ -224,11 +222,12 @@ def get_energies(d, wavfiles):
         energie[idx] = signal_2.sum()
         if idx % int(number_of_files / 10) == 0:
             print(str(idx) + " von " + str(number_of_files))
+
     df = pandas.DataFrame(data=energie, index=file_list, columns={'GesamtEnergie'})
     return df
 
 
-def prognose(data):
+def prognose(data, gamma=0.95):
     """
     Berechnung des Prognosebereichs
     :param data:
@@ -243,8 +242,6 @@ def prognose(data):
     Einheit_unit = 'W'
 
     # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
-    gamma = 0.95
-
     c1 = t.ppf((1 - gamma) / 2, N - 1)
     c2 = t.ppf((1 + gamma) / 2, N - 1)
     x_prog_min = data_mean + c1 * data_std * np.sqrt(1 + 1 / N)
@@ -262,7 +259,7 @@ if __name__ == "__main__":
     ################################################
     print('hello World')
     do_plot = False  # Plotten der Graphen zum Debuggen
-    do_test_mode = True  # Diverse Beschleuniger
+    do_test_mode = False  # Diverse Beschleuniger
     do_play = False  # außer Betrieb
 
     plt.clf()
@@ -310,16 +307,20 @@ if __name__ == "__main__":
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
     ################################################
+    # gesamtenergie hat einen Median und anhand dessen kann ich doch auch bereits Ausreisser erkennen?
 
     gesamtenergien = get_energies(audio_dir, wavfiles)
     sieb_energien = gesamtenergien.drop_duplicates()
     sieb_energien = sieb_energien.dropna()
 
+    # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
     progmin, progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
-
+    # siebe nun anhand der prognostizierten Schwellenwerte.
     for x in sieb_energien.index:
         if sieb_energien.loc[x, "GesamtEnergie"] > progmax:
             sieb_energien.drop(x, inplace=True)
+    # = sieb_energien fertig  gesiebt
+    progmin, progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
 
     sieb_energien.to_csv('sieb.csv', index=True)
     wavfiles = sieb_energien.index.values
@@ -327,8 +328,8 @@ if __name__ == "__main__":
     # Untersuchen des Signals und Fenstern
     ################################################
     win, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
-    # if not do_test_mode:
-    if do_test_mode:
+    if not do_test_mode:
+        # if do_test_mode:
         for audiofile in wavfiles:
             anzahl_bearbeitet += 1
             anzahlnochnicht -= 1
