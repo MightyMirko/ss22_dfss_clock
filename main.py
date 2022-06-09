@@ -17,8 +17,10 @@ from scipy.io import wavfile
 from os.path import join as pjoin
 from os import listdir
 
+import tqdm
 import os
 
+import pandas
 from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
 import numpy as np
@@ -234,6 +236,16 @@ if __name__ == "__main__":
     ###############
     # Anlegen der Variablen aus den statistischen Methoden
     ###############
+    ############
+    # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
+    #
+    ############
+
+
+
+
+
+
 
     win, step = 0.005, 0.005
 
@@ -244,6 +256,9 @@ if __name__ == "__main__":
     # Untersuchen des Signals und Fenstern
     ############
 
+    import time
+    from joblib import Parallel, delayed
+
     """
     start_time = time.perf_counter()
     (result) = Parallel(n_jobs=25)(delayed(processFolder)(audiofile, audio_dir,win,step) for audiofile in wavfiles)
@@ -251,15 +266,6 @@ if __name__ == "__main__":
     print(f"Program finished in {finish_time - start_time} seconds")
     print(result)
     """
-    ########
-    # Erstmal nur wavs
-    for audiofile in wavfiles:
-        if not '.wav' in audiofile:
-            wavfiles.pop(audiofile)
-        if '16_10_21' in audiofile:
-            wavfiles.pop(audiofile)
-
-
 
     if not do_test_mode:
         for audiofile in wavfiles:
@@ -293,6 +299,7 @@ if __name__ == "__main__":
                     csv_exp.append(tmps)
                 except ValueError:
                     try:
+                        # TODO:
                         angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
                         csv_exp.append(angepasst)
                     except ValueError:
