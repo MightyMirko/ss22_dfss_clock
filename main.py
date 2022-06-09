@@ -367,7 +367,6 @@ if __name__ == "__main__":
                     print('Diese Datei muss näher untersucht werden:\t' + zeile)
                     # Tatsächlich habe ich die Dateien bereits verworfen gehabt.. aber dann doch wieder eingebaut..
                     # try:
-                    #    # TODO: erledigt..
                     #    angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
                     #    csv_exp.append(angepasst)
                     # except ValueError:
