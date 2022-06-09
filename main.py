@@ -17,10 +17,8 @@ from scipy.io import wavfile
 from os.path import join as pjoin
 from os import listdir
 
-import tqdm
 import os
 
-import pandas
 from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
 import numpy as np
@@ -181,6 +179,27 @@ def cut_signal(f, fn, s):
     return olds, tmps, news
 
 
+def siebwithenergy(d, wavfiles):
+    file_list = wavfiles[100:9000]
+    number_of_files = len(file_list)
+    # p = tqdm(total=number_of_files, disable=False)
+
+    print(number_of_files)
+    energie = np.zeros(number_of_files)
+
+    # Energie bestimmen absolut
+    for idx in range(len(file_list)):
+        # einlesen
+        samplerate, data = wavfile.read(d + os.pathsep + file_list[idx])
+        # Berechnung
+        signal_2 = data ** 2
+        energie[idx] = signal_2.sum()
+        if idx % 100 == 0:
+            print(idx)
+
+    print('Fertig:')
+
+
 if __name__ == "__main__":
 
     #############
@@ -225,9 +244,6 @@ if __name__ == "__main__":
     # Untersuchen des Signals und Fenstern
     ############
 
-    import time
-    from joblib import Parallel, delayed
-
     """
     start_time = time.perf_counter()
     (result) = Parallel(n_jobs=25)(delayed(processFolder)(audiofile, audio_dir,win,step) for audiofile in wavfiles)
@@ -235,6 +251,15 @@ if __name__ == "__main__":
     print(f"Program finished in {finish_time - start_time} seconds")
     print(result)
     """
+    ########
+    # Erstmal nur wavs
+    for audiofile in wavfiles:
+        if not '.wav' in audiofile:
+            wavfiles.pop(audiofile)
+        if '16_10_21' in audiofile:
+            wavfiles.pop(audiofile)
+
+
 
     if not do_test_mode:
         for audiofile in wavfiles:
