@@ -8,6 +8,8 @@
 # db scan
 
 import os
+from datetime import datetime
+from enum import Enum
 from os import listdir
 from os.path import join as pjoin
 
@@ -28,6 +30,13 @@ from tqdm.notebook import tqdm
 plt.rcParams['figure.dpi'] = 150
 # plt.rcParams['interactive'] = True
 plt.rcParams['figure.figsize'] = (12, 9)
+
+
+class ZeigerWinkel(Enum):
+    HOCH = 1
+    RUNTER = 2
+    UNSICHER1 = 3
+    UNSICHER2 = 4
 
 
 def plotsounds(ax, data, abszisse, param_dict=None, filename='N/A', samplerate=48000, log=True,
@@ -245,6 +254,36 @@ def prognose(data, gamma=0.95):
     return x_prog_max
 
 
+def getsecs(fromdf):
+    form = r' %Y%m%d_%H_%M_%S'
+    print('Hello ')
+    dt_list = []
+    for row_index, row in fromdf.iterrows():
+        # dat = os.path.splitext(row_index)[0]
+        dat = os.path.basename(row_index)
+        dat = dat.split(".")[0]
+        date_string = datetime.strptime(dat, form)
+        sekzeiger = date_string.second
+        status = "'"
+        try:
+            if not sekzeiger <= 0 and sekzeiger < 3:
+                status = ZeigerWinkel(3)
+            if not sekzeiger <= 3 and sekzeiger < 27:
+                status = ZeigerWinkel(2)
+            if not sekzeiger <= 27 and sekzeiger < 33:
+                status = ZeigerWinkel(4)
+            if not sekzeiger <= 33 and sekzeiger < 57:
+                status = ZeigerWinkel(2)
+            if not sekzeiger <= 57 and sekzeiger < 0:
+                status = ZeigerWinkel(3)
+        except:
+            pass
+        dt_list.append((date_string, status))
+
+    dtdf = pandas.DataFrame(dt_list, index=sieb_energien.index, columns=['rectime', 'ZeigerWinkel'])
+    return dtdf
+
+
 if __name__ == "__main__":
 
     ################################################
@@ -307,20 +346,25 @@ if __name__ == "__main__":
 
     sieb_energien = pandas.read_csv('gesamtdaten_energien.csv', index_col=0)
     idx = 0
+
     while idx < 2:
         sieb_energien = sieb_energien.dropna()
         # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
-        progmax1 = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
+        if idx < 1:
+            progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy(), gamma=0.997)
+        else:
+            progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy(), gamma=0.95)
 
         # siebe nun anhand der prognostizierten Schwellenwerte.
         for x in sieb_energien.index:
-            if sieb_energien.loc[x, "GesamtEnergie"] > progmax1:
+            if sieb_energien.loc[x, "GesamtEnergie"] > progmax:
                 sieb_energien.drop(x, inplace=True)
         idx += 1
         print(sieb_energien.shape[0])
 
     sieb_energien.to_csv('sieb.csv', index=True)
     wavfiles = sieb_energien.index.values
+    wavfiles = wavfiles.join(getsecs(wavfiles))
 
     ################################################
     # Untersuchen des Signals und Fenstern
