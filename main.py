@@ -15,12 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas
 import pandas as pd
-import numpy as np
 import tqdm
-import os
-from os.path import join as pjoin
-from os import listdir
-from scipy.io import wavfile
 from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
 from scipy.io import wavfile
@@ -103,10 +98,6 @@ def getwav_fromfolder(wavdir, do_test=False):
     t.close()
 
     return wavfiles, df
-
-
-def square(x):
-    return x ** 2
 
 
 def chroma_plot(featvec, names):
@@ -247,14 +238,11 @@ def prognose(data, gamma=0.95):
     Einheit_unit = 'W'
 
     # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
-    c1 = t.ppf((1 - gamma) / 2, N - 1)
-    c2 = t.ppf((1 + gamma) / 2, N - 1)
-    x_prog_min = data_mean + c1 * data_std * np.sqrt(1 + 1 / N)
-    x_prog_max = data_mean + c2 * data_std * np.sqrt(1 + 1 / N)
+    c = t.ppf((gamma), N - 1)
+    x_prog_max = data_mean + c * data_std * np.sqrt(1 + 1 / N)
+    print('Prognosewert: x', '<=\t', round(x_prog_max, 4), Einheit_unit)
 
-    print('Prognosewert:', round(x_prog_min, 4), Einheit_unit, '< x <=', round(x_prog_max, 4), Einheit_unit)
-
-    return x_prog_min, x_prog_max
+    return x_prog_max
 
 
 if __name__ == "__main__":
@@ -314,18 +302,23 @@ if __name__ == "__main__":
     ################################################
     # gesamtenergie hat einen Median und anhand dessen kann ich doch auch bereits Ausreisser erkennen?
 
-    gesamtenergien = get_energies(audio_dir, wavfiles)
-    sieb_energien = gesamtenergien.drop_duplicates()
+    # gesamtenergien = get_energies(audio_dir, wavfiles)
+    # sieb_energien = gesamtenergien.drop_duplicates()
+
+    sieb_energien = pandas.read_csv('gesamtdaten_energien.csv', index_col=0)
     sieb_energien = sieb_energien.dropna()
 
     # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
-    progmin, progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
+    progmax1 = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
+
     # siebe nun anhand der prognostizierten Schwellenwerte.
     for x in sieb_energien.index:
-        if sieb_energien.loc[x, "GesamtEnergie"] > progmax:
+        if sieb_energien.loc[x, "GesamtEnergie"] > progmax1:
             sieb_energien.drop(x, inplace=True)
     # = sieb_energien fertig  gesiebt
-    progmin, progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
+    # wie stark würde sich denn die prognose ändern?
+
+    progmax2 = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
 
     sieb_energien.to_csv('sieb.csv', index=True)
     wavfiles = sieb_energien.index.values
@@ -345,12 +338,13 @@ if __name__ == "__main__":
                                                                                    anzahl,
                                                                                    iteration_over_file + 1)
                 txt1 = ('Bearbeiten von {}.').format(audiofile)
-
                 print(txt, '\n', txt1)
+
                 ################################################
                 # Rolling Window
                 ################################################
                 f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
+
                 time = np.linspace(0., len(signal) / float(fs), len(signal))
                 duration = len(signal) / float(fs)
                 timew = np.arange(0, duration - step, win)
@@ -359,6 +353,7 @@ if __name__ == "__main__":
                 # Nehme den gefunden Index und schneide signal heraus in tmps
                 ################################################
                 olds, tmps, news = cut_signal(f, fn, signal)
+
                 zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
                 zeilennamen.append(zeile)
 
