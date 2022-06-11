@@ -192,6 +192,7 @@ def cut_signal(f, fn, s):
     back_in_sample = int(fs * back_in_ms)
     adv_in_sample = int(fs * adv_in_ms)
     deltasample = adv_in_sample - back_in_sample
+
     olds = s.copy()
     tmps = s[back_in_sample:adv_in_sample]
     news = s.copy()
@@ -255,12 +256,12 @@ def prognose(data, gamma=0.95):
 
 
 def getsecs(fromdf):
-    form = r' %Y%m%d_%H_%M_%S'
+    form = '%Y%m%d_%H_%M_%S'
     print('Hello ')
     dt_list = []
     for row_index, row in fromdf.iterrows():
         # dat = os.path.splitext(row_index)[0]
-        dat = os.path.basename(row_index)
+        dat = os.path.basename(row_index).lstrip()
         dat = dat.split(".")[0]
         date_string = datetime.strptime(dat, form)
         sekzeiger = date_string.second
@@ -344,7 +345,7 @@ if __name__ == "__main__":
     # gesamtenergien = get_energies(audio_dir, wavfiles)
     # sieb_energien = gesamtenergien.drop_duplicates()
 
-    sieb_energien = pandas.read_csv('gesamtdaten_energien.csv', index_col=0)
+    sieb_energien = pandas.read_csv('gesamtdaten_energien.csv', index_col=0) / 2 ** 15
     idx = 0
 
     while idx < 2:
@@ -362,8 +363,8 @@ if __name__ == "__main__":
         idx += 1
         print(sieb_energien.shape[0])
 
-    sieb_energien.to_csv('sieb.csv', index=True)
-    wavfiles = sieb_energien.index.values
+    # sieb_energien.to_csv('sieb.csv', index=True)
+    wavfiles = sieb_energien.copy()
     wavfiles = wavfiles.join(getsecs(wavfiles))
 
     ################################################
@@ -372,7 +373,8 @@ if __name__ == "__main__":
     win, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
     if not do_test_mode:
         # if do_test_mode:
-        for audiofile in wavfiles:
+        for audiofile, row in sieb_energien.iterrows():
+            # audiofile =  audiofile.lstrip()
             anzahl_bearbeitet += 1
             anzahlnochnicht -= 1
             iteration_over_file = 0
