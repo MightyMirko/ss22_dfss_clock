@@ -306,22 +306,22 @@ if __name__ == "__main__":
     # sieb_energien = gesamtenergien.drop_duplicates()
 
     sieb_energien = pandas.read_csv('gesamtdaten_energien.csv', index_col=0)
-    sieb_energien = sieb_energien.dropna()
+    idx = 0
+    while idx < 2:
+        sieb_energien = sieb_energien.dropna()
+        # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
+        progmax1 = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
 
-    # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
-    progmax1 = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
-
-    # siebe nun anhand der prognostizierten Schwellenwerte.
-    for x in sieb_energien.index:
-        if sieb_energien.loc[x, "GesamtEnergie"] > progmax1:
-            sieb_energien.drop(x, inplace=True)
-    # = sieb_energien fertig  gesiebt
-    # wie stark würde sich denn die prognose ändern?
-
-    progmax2 = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
+        # siebe nun anhand der prognostizierten Schwellenwerte.
+        for x in sieb_energien.index:
+            if sieb_energien.loc[x, "GesamtEnergie"] > progmax1:
+                sieb_energien.drop(x, inplace=True)
+        idx += 1
+        print(sieb_energien.shape[0])
 
     sieb_energien.to_csv('sieb.csv', index=True)
     wavfiles = sieb_energien.index.values
+
     ################################################
     # Untersuchen des Signals und Fenstern
     ################################################
