@@ -1,4 +1,4 @@
-# @Author Mirko Matosin
+# @Author Mirko Matosin und Alexander Wünstel
 # @Date 14.02.2022
 #
 
@@ -7,24 +7,27 @@
 # isolation forest
 # db scan
 
-import matplotlib.pyplot as plt
-import pandas as pd
+import os
+from os import listdir
+from os.path import join as pjoin
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas
+import pandas as pd
+import tqdm
+from pyAudioAnalysis import ShortTermFeatures as aF
+from pyAudioAnalysis import audioBasicIO as aIO
+from scipy.io import wavfile
+from scipy.stats import t
+from tqdm.notebook import tqdm
+
+###################
+# Anlegen globaler Var
+###################
 plt.rcParams['figure.dpi'] = 150
 # plt.rcParams['interactive'] = True
 plt.rcParams['figure.figsize'] = (12, 9)
-from scipy.io import wavfile
-from os.path import join as pjoin
-from os import listdir
-
-import tqdm
-import os
-
-import pandas
-from pyAudioAnalysis import ShortTermFeatures as aF
-from pyAudioAnalysis import audioBasicIO as aIO
-import numpy as np
-from tqdm.notebook import tqdm
 
 
 def plotsounds(ax, data, abszisse, param_dict=None, filename='N/A', samplerate=48000, log=True,
@@ -32,6 +35,11 @@ def plotsounds(ax, data, abszisse, param_dict=None, filename='N/A', samplerate=4
     """
     Plottet eine Spalte oder ein Vektor in Timedomain
 
+    :param title:
+    :param log:
+    :param param_dict:
+    :param abszisse:
+    :param ax:
     :param data: hier kommt eine Series (Spalte Dataframe) hinein.
     :param filename: Legendenname
     :param samplerate: 96000 sind Standard. Wird für die Zeitachse genommen
@@ -93,7 +101,7 @@ def getwav_fromfolder(wavdir, do_test=False):
 
 
 def square(x):
-    return x**2
+    return x ** 2
 
 
 def chroma_plot(featvec, names):
@@ -143,11 +151,16 @@ def plot_energy(f, fn, filename):
     fig1.show()
 
 
-def processFolder(audiofile, audio_dir, win=0.005, step=0.005):
-    if not '.wav' in audiofile:
-        return
-    if '16_10_21' in audiofile:
-        return
+def process_folder(audiofile, audio_dir, win=0.005, step=0.005):
+    """
+
+    :param audiofile: muss sanitized sein
+    :param audio_dir: muss sanitized sein
+    :param win:
+    :param step:
+    :return:
+    """
+
     audiofile = os.path.join(audio_dir + "\\" + audiofile)
     fs, signal = aIO.read_audio_file(audiofile)
     ###############
@@ -157,6 +170,7 @@ def processFolder(audiofile, audio_dir, win=0.005, step=0.005):
     time = np.arange(0, duration - step, win)
     # extract short-term features using a 50msec non-overlapping windows
     [f, fn] = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
+
     return f, fn, fs, signal
 
 
@@ -181,67 +195,142 @@ def cut_signal(f, fn, s):
     return olds, tmps, news
 
 
+def get_energies(d, wavfiles):
+    """
+    Diese Funktion bestimmt die Schwellenwerte aller Signale und erstellt ein Dataframe
+
+    :param d: wo soll der suchen
+    :param wavfiles: übergabe der zu siebenden Daten
+    :return:
+    """
+    # try:
+    #     file_list = wavfiles[100:9000]
+    # except:
+    file_list = wavfiles
+
+    number_of_files = len(file_list)
+    print(number_of_files)
+    energie = np.zeros(number_of_files)
+
+    # Energie bestimmen absolut
+    for idx in range(len(file_list)):
+        # einlesen
+        fn = file_list[idx]
+        samplerate, data = wavfile.read(d + ('\\') + file_list[idx])
+        # Berechnung
+        signal_2 = data ** 2
+        energie[idx] = signal_2.sum()
+        if idx % int(number_of_files / 10) == 0:
+            print(str(idx) + " von " + str(number_of_files))
+
+    df = pandas.DataFrame(data=energie, index=file_list, columns={'GesamtEnergie'})
+    return df
+
+
+def prognose(data, gamma=0.95):
+    """
+    Berechnung des Prognosebereichs
+    :param data:
+    :return:
+    """
+
+    N = np.size(data)
+    data_mean = np.mean(data)
+    data_var = np.var(data, ddof=1)
+    data_std = np.std(data, ddof=1)
+
+    Einheit_unit = 'W'
+
+    # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
+    c1 = t.ppf((1 - gamma) / 2, N - 1)
+    c2 = t.ppf((1 + gamma) / 2, N - 1)
+    x_prog_min = data_mean + c1 * data_std * np.sqrt(1 + 1 / N)
+    x_prog_max = data_mean + c2 * data_std * np.sqrt(1 + 1 / N)
+
+    print('Prognosewert:', round(x_prog_min, 4), Einheit_unit, '< x <=', round(x_prog_max, 4), Einheit_unit)
+
+    return x_prog_min, x_prog_max
+
+
 if __name__ == "__main__":
 
-    #############
+    ################################################
     # Anlegen der Kontrollvariablen
-    ############
+    ################################################
     print('hello World')
     do_plot = False  # Plotten der Graphen zum Debuggen
-    do_test_mode = True  # Diverse Beschleuniger
+    do_test_mode = False  # Diverse Beschleuniger
     do_play = False  # außer Betrieb
 
-    csv_exp = []  # Der Haupt-Dataframe
+    plt.clf()
+    ################################################
+    # Arbeits Variablen
+    ################################################
+    csv_exp = []  # Der exportierende
     zeilennamen = []
-    audio_dir = ''
 
+    audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
+
+    ################################################
+    # Überprüfung
+    ################################################
     if do_test_mode:
         audio_dir = r'data'
     else:
-        if os.path.exists('H:\Messung_BluetoothMikro\Messung 3\Audios'):
-            audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
-
-    plt.clf()
+        if not os.path.exists(audio_dir):
+            raise IOError
+        else:
+            audio_dir = audio_dir
+    ################################################
+    # Anlegen der Variablen und Wav-Liste
+    ################################################
 
     duration = 0
     timew = 0
     iteration_over_file = 0
     anzahl_bearbeitet = 0
-    wavfiles = listdir(audio_dir)
-    wavfiles = wavfiles[:400]
+    wavfiles = []
+    ################################################
+    # Desinfizieren der Wavliste
+    ################################################
+
+    with os.scandir(audio_dir) as it:
+        for entry in it:
+            if entry.name.endswith('.wav') and entry.is_file():
+                wavfiles.append(entry.name)
+
+    # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
-    csvlength = 3  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
-    ###############
-    # Anlegen der Variablen aus den statistischen Methoden
-    ###############
+    csvlength = 300  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
 
-    win, step = 0.005, 0.005
+    ################################################
+    # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
+    ################################################
+    # gesamtenergie hat einen Median und anhand dessen kann ich doch auch bereits Ausreisser erkennen?
 
-    # r steht für roh/raw.. Damit lassen sich windows pfade verarbeiten
-    # damit sehen wir sofort welche variable wie verarbeitet wird. Erleichtert die Lesbarkeit.
-    # ergibt ein Tupel aus Spaltenname und Serie für jede Spalte im Datenrahmen:
-    #############
+    gesamtenergien = get_energies(audio_dir, wavfiles)
+    sieb_energien = gesamtenergien.drop_duplicates()
+    sieb_energien = sieb_energien.dropna()
+
+    # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
+    progmin, progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
+    # siebe nun anhand der prognostizierten Schwellenwerte.
+    for x in sieb_energien.index:
+        if sieb_energien.loc[x, "GesamtEnergie"] > progmax:
+            sieb_energien.drop(x, inplace=True)
+    # = sieb_energien fertig  gesiebt
+    progmin, progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy())
+
+    sieb_energien.to_csv('sieb.csv', index=True)
+    wavfiles = sieb_energien.index.values
+    ################################################
     # Untersuchen des Signals und Fenstern
-    ############
-
-    import time
-    from joblib import Parallel, delayed
-
-    """
-    start_time = time.perf_counter()
-    (result) = Parallel(n_jobs=25)(delayed(processFolder)(audiofile, audio_dir,win,step) for audiofile in wavfiles)
-    finish_time = time.perf_counter()
-    print(f"Program finished in {finish_time - start_time} seconds")
-    print(result)
-    """
-
+    ################################################
+    win, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
     if not do_test_mode:
+        # if do_test_mode:
         for audiofile in wavfiles:
-            if not '.wav' in audiofile:
-                continue
-            if '16_10_21' in audiofile:
-                continue
             anzahl_bearbeitet += 1
             anzahlnochnicht -= 1
             iteration_over_file = 0
@@ -249,43 +338,54 @@ if __name__ == "__main__":
             while iteration_over_file < 2:
                 txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
                                                                                    anzahl,
-                                                                                   iteration_over_file)
+                                                                                   iteration_over_file + 1)
                 txt1 = ('Bearbeiten von {}.').format(audiofile)
+
                 print(txt, '\n', txt1)
-                f, fn, fs, signal = processFolder(audiofile, audio_dir, win, step)
+                ################################################
+                # Rolling Window
+                ################################################
+                f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
                 time = np.linspace(0., len(signal) / float(fs), len(signal))
                 duration = len(signal) / float(fs)
                 timew = np.arange(0, duration - step, win)
 
-                ###############
+                ################################################
                 # Nehme den gefunden Index und schneide signal heraus in tmps
-                ###############
+                ################################################
                 olds, tmps, news = cut_signal(f, fn, signal)
                 zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
                 zeilennamen.append(zeile)
 
+                ################################################
+                # Versuche das geschnittene Signal in die csv zu drücken.. Wenn es nicht, da nicht gleich lang so passt
+                # das Programm das geschnittene Signal an und füllt es mit einem konstanten Wert..
+                #
+                ################################################
                 try:
                     csv_exp.append(tmps)
                 except ValueError:
-                    try:
-                        angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
-                        csv_exp.append(angepasst)
-                    except ValueError:
-                        pass
+                    print('Diese Datei muss näher untersucht werden:\t' + zeile)
+                    # Tatsächlich habe ich die Dateien bereits verworfen gehabt.. aber dann doch wieder eingebaut..
+                    # try:
+                    #    angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
+                    #    csv_exp.append(angepasst)
+                    # except ValueError:
+                    #    pass
 
                 if len(csv_exp) >= csvlength * 2:
                     outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
                     df = pd.DataFrame(csv_exp, index=zeilennamen)
                     if not do_test_mode:
-                            try:
-                                output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                                df.to_csv(output, index=True)
-                            except PermissionError:
-                                outn = 'io_hand' + outn
-                                output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                                df.to_csv(output, index=True)
-                            df = pd.DataFrame()
-                            csv_exp, zeilennamen = [], []
+                        try:
+                            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                            df.to_csv(output, index=True)
+                        except PermissionError:
+                            outn = 'io_hand' + outn
+                            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+                            df.to_csv(output, index=True)
+                        df = pd.DataFrame()
+                        csv_exp, zeilennamen = [], []
 
                 #########################
                 # Setzen vor Rekursion Ende
@@ -311,31 +411,30 @@ if __name__ == "__main__":
         meddf_proTick = pd.DataFrame(dft_nrg_proTick.median()).transpose()
         # Pro Sample
 
-        dft_nrg_proS= dft_nrg_proTick.T
-        statsdf_proS= statsdf_proTick.T
-        meddf_proS= meddf_proTick.T
+        dft_nrg_proS = dft_nrg_proTick.T
+        statsdf_proS = statsdf_proTick.T
+        meddf_proS = meddf_proTick.T
         timew = np.arange(0, 6720, 1)
-        #fig,ax = plt.subplots(2,1)
-        #ax[0].plot(yaxis = dft.iloc[:,3], xaxis = timew)
-        #fig.show()
-        #proTick = pd.concat([statsdf_proTick, meddf_proTick], keys=[ 'stats', 'median'], axis=1, join='outer')
-        #proSam = pd.concat([statsdf_proS, meddf_proS], keys=[ 'stats', 'median'], axis=1, join='outer')
-        #print(proTick,proSam)
-        #for col in dft_nrg_proTick.columns:
+        # fig,ax = plt.subplots(2,1)
+        # ax[0].plot(yaxis = dft.iloc[:,3], xaxis = timew)
+        # fig.show()
+        # proTick = pd.concat([statsdf_proTick, meddf_proTick], keys=[ 'stats', 'median'], axis=1, join='outer')
+        # proSam = pd.concat([statsdf_proS, meddf_proS], keys=[ 'stats', 'median'], axis=1, join='outer')
+        # print(proTick,proSam)
+        # for col in dft_nrg_proTick.columns:
         #    dft_nrg_proTick[col].plot()
         #    plt.title(col)
         #    plt.show()
         for col in dft_nrg_proTick.columns:
             fig, ax = plt.subplots(3, 1)
-            dft[col].plot(subplots=True,ax=ax[0])
+            dft[col].plot(subplots=True, ax=ax[0])
 
-            dft_nrg_proTick[col].plot(subplots=True,ax=ax[1])
+            dft_nrg_proTick[col].plot(subplots=True, ax=ax[1])
             dft_nrg_proTick[col].plot.hist(subplots=True, ax=ax[2])
-
 
             fig.tight_layout()
             fig.suptitle(col)
-            #fig.supxlabel('Time in Samples')
+            # fig.supxlabel('Time in Samples')
             ax[0].set_ylabel = 'Signal'
             ax[1].set_ylabel = 'genormte Energie'
             ax[2].set_ylabel = 'Häufigkeiten'
@@ -350,7 +449,6 @@ if __name__ == "__main__":
     plt.close()
 
     print('bye world')
-
 
 '''
 The join() method inserts column(s) from another DataFrame, or Series.
