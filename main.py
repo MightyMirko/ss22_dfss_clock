@@ -282,7 +282,7 @@ if __name__ == "__main__":
     ################################################
     csv_exp = []  # Der exportierende
     zeilennamen = []
-
+    errata = []
     audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
 
     ################################################
@@ -331,12 +331,29 @@ if __name__ == "__main__":
     # Plotte die Grundgesamtheit und dann jedes mal wieder nach dem Sieben mittels prognose
     ################################################
     fig, ax = plt.subplots(3, 2, sharex='all')  # , sharey='all')
-    pwr = sieb_energien['GesamtEnergie'].copy() / 2 ** 15
+    pwr = sieb_energien['GesamtEnergie'].copy()
 
-    ### TODO: Das hier muss an die richtige Stelle geschoben werden :-)
+    qu = sieb_energien['GesamtEnergie'].quantile(0.1)
+    qo = sieb_energien['GesamtEnergie'].quantile(0.999)
+    v=pwr.shape[0]
+    minimalschwellle = qu  # eigentlich lieber mit der fft für frequenzen kleiner 300 Hz
+    maximalschwelle = qo# nur einen rauskicken
+    for x in pwr.index:
+        if pwr.loc[x] > minimalschwellle and pwr.loc[x] < maximalschwelle:  # or pwr.loc[x] < progmin:
+            pass
+        else:
+            pwr.drop(x, inplace=True)
+    rausgeworfen = v - pwr.shape[0]
+    if rausgeworfen == 0:
+        print('Keine ausgesiebt')
+    else :
+        print('{} Audiofiles rausgeworfen'.format(rausgeworfen))
+
+    pwr_box = pwr.copy()
+
+    ### TODO: Das hier muss an die richtige Stelle geschoben werden :-) Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen
     if do_test_mode:
         plt.close('all')
-
         exit(1)
 
     idx = 0
@@ -370,11 +387,13 @@ if __name__ == "__main__":
             anzahl_bearbeitet += 1
             anzahlnochnicht -= 1
             iteration_over_file = 0
-
+            ################################################
+            # Laufe 2x über das Signal. Es stecken meistens 2 Ticks pro File
+            ################################################
             while iteration_over_file < 2:
                 txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
-                                                                                   anzahl,
-                                                                                   iteration_over_file + 1)
+                                                                                anzahl,
+                                                                                iteration_over_file + 1)
                 txt1 = ('Bearbeiten von {}.').format(audiofile)
                 print(txt, '\n', txt1)
 
@@ -403,6 +422,7 @@ if __name__ == "__main__":
                 try:
                     csv_exp.append(tmps)
                 except ValueError:
+                    errata.append((zeile,tmps))
                     print('Diese Datei muss näher untersucht werden:\t' + zeile)
                     # Tatsächlich habe ich die Dateien bereits verworfen gehabt.. aber dann doch wieder eingebaut..
                     # try:
@@ -410,7 +430,9 @@ if __name__ == "__main__":
                     #    csv_exp.append(angepasst)
                     # except ValueError:
                     #    pass
-
+                ################################################
+                # Export der csv datei wenn länger als x
+                ################################################
                 if len(csv_exp) >= csvlength * 2:
                     outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
                     df = pd.DataFrame(csv_exp, index=zeilennamen)
@@ -425,66 +447,20 @@ if __name__ == "__main__":
                         df = pd.DataFrame()
                         csv_exp, zeilennamen = [], []
 
-                #########################
+                ################################################
                 # Setzen vor Rekursion Ende
-                #########################
+                ################################################
 
                 signal = news.copy()
                 iteration_over_file += 1
 
-                #########################
+
+                ################################################
                 # achtung while Schleife ende
-                #########################
+                ################################################
 
-            # break
-
-    if do_test_mode:
-        try:
-            dft = pd.read_csv('test.csv')
-        except:
-            dft = pd.DataFrame(csv_exp, index=zeilennamen).transpose(copy=True)
-        # Pro Tick:
-        dft_nrg_proTick = dft.apply(lambda x: x ** 2 / (2 ** 15))
-        statsdf_proTick = dft_nrg_proTick.describe()  # tmp = pd.DataFrame(dft.median())
-        meddf_proTick = pd.DataFrame(dft_nrg_proTick.median()).transpose()
-        # Pro Sample
-
-        dft_nrg_proS = dft_nrg_proTick.T
-        statsdf_proS = statsdf_proTick.T
-        meddf_proS = meddf_proTick.T
-        timew = np.arange(0, 6720, 1)
-        # fig,ax = plt.subplots(2,1)
-        # ax[0].plot(yaxis = dft.iloc[:,3], xaxis = timew)
-        # fig.show()
-        # proTick = pd.concat([statsdf_proTick, meddf_proTick], keys=[ 'stats', 'median'], axis=1, join='outer')
-        # proSam = pd.concat([statsdf_proS, meddf_proS], keys=[ 'stats', 'median'], axis=1, join='outer')
-        # print(proTick,proSam)
-        # for col in dft_nrg_proTick.columns:
-        #    dft_nrg_proTick[col].plot()
-        #    plt.title(col)
-        #    plt.show()
-        for col in dft_nrg_proTick.columns:
-            fig, ax = plt.subplots(3, 1)
-            dft[col].plot(subplots=True, ax=ax[0])
-
-            dft_nrg_proTick[col].plot(subplots=True, ax=ax[1])
-            dft_nrg_proTick[col].plot.hist(subplots=True, ax=ax[2])
-
-            fig.tight_layout()
-            fig.suptitle(col)
-            # fig.supxlabel('Time in Samples')
-            ax[0].set_ylabel = 'Signal'
-            ax[1].set_ylabel = 'genormte Energie'
-            ax[2].set_ylabel = 'Häufigkeiten'
-            ax[0].set_xlabel = ''
-            ax[1].set_xlabel = 'Zeit in Samples'
-            ax[2].set_xlabel = ''
-            fig.show()
-        # standard_deviations = 3
-    # df[df.apply(lambda x: np.abs(x - x.mean()) / x.std() < standard_deviations).all(axis=1)]
-
-    plt.clf()
-    plt.close()
+   
+    plt.close('all')
 
     print('bye world')
 
