@@ -272,8 +272,12 @@ def prognose(data, gamma=0.95, bereich='beide'):
 
 
 def getsecs(fromdf):
+    '''
+    
+    :param fromdf:
+    :return:
+    '''
     form = '%Y%m%d_%H_%M_%S'
-    print('Hello ')
     dt_list = []
     for row_index, row in fromdf.iterrows():
         # dat = os.path.splitext(row_index)[0]
@@ -297,7 +301,7 @@ def getsecs(fromdf):
             pass
         dt_list.append((date_string, status))
 
-    dtdf = pandas.DataFrame(dt_list, index=sieb_energien.index, columns=['rectime', 'ZeigerWinkel'])
+    dtdf = pandas.DataFrame(dt_list, index=fromdf.index, columns=['rectime', 'ZeigerWinkel'])
     return dtdf
 
 
