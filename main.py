@@ -10,19 +10,15 @@
 import os
 from datetime import datetime
 from enum import Enum
-from os import listdir
-from os.path import join as pjoin
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas
 import pandas as pd
-import tqdm
 from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
 from scipy.io import wavfile
 from scipy.stats import t
-from tqdm.notebook import tqdm
 
 ###################
 # Anlegen globaler Var
@@ -33,6 +29,8 @@ plt.rcParams['figure.figsize'] = (12, 9)
 
 
 class ZeigerWinkel(Enum):
+    """
+    """
     HOCH = 1
     RUNTER = 2
     UNSICHER1 = 3
@@ -71,42 +69,6 @@ def plotsounds(ax, data, abszisse, param_dict=None, filename='N/A', samplerate=4
     ax.set_ylabel(ylab)
     ax.set_title(title)
     return out
-
-
-def getwav_fromfolder(wavdir, do_test=False):
-    """
-    Sucht alle Wavdateien in einem Ordner und speichert die Rohdaten in einem gemeinsamenem Objekt
-    :param wavdir: Pfad wo die wav daten liegen
-    :return: relativer Pfad mit Dateiname und das pandas Dataframe für die Rohdaten
-    """
-    wavfiles = []
-    filenames = []
-    df = pd.DataFrame()
-
-    show_progress = True
-    t = tqdm(total=1, unit="file", disable=not show_progress)
-
-    if not os.path.exists(wavdir):
-        raise IOError("Cannot find:" + wavdir)
-
-    for file in listdir(wavdir):
-        if file.endswith(".wav"):
-            import re
-            filename = re.sub(r'.wav$', '', file)
-            if do_test and not 'audio' in filename:
-                continue
-            else:
-                pfad = pjoin(wavdir, file)
-                wavfiles.append(pfad)
-                filenames.append(filename)
-                samplerate, data = wavfile.read(filename=pfad)
-                df[filename] = data
-                # df['samplerate'] = samplerate
-                # break
-        t.set_postfix(dir=wavdir)
-    t.close()
-
-    return wavfiles, df
 
 
 def chroma_plot(featvec, names):
@@ -261,8 +223,7 @@ def prognose(data, gamma=0.95, bereich='beide'):
         print('Prognosewert:', round(x_prog_min, 9), Einheit_unit, '< x <=', round(x_prog_max, 9), Einheit_unit)
         return x_prog_min, x_prog_max
     if bereich == 'links':
-        c1 = t.ppf((1 - gamma) / 2, N - 1)
-        c2 = t.ppf((1 + gamma) / 2, N - 1)
+        c1 = t.ppf((1 - gamma), N - 1)
         x_prog_min = data_mean + c1 * data_std * np.sqrt(1 + 1 / N)
         print('Prognosewert: x', '<=\t', round(x_prog_min, 9), Einheit_unit)
         return x_prog_min
@@ -273,7 +234,7 @@ def prognose(data, gamma=0.95, bereich='beide'):
 
 def getsecs(fromdf):
     '''
-    
+
     :param fromdf:
     :return:
     '''
@@ -361,26 +322,24 @@ if __name__ == "__main__":
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
     ################################################
     # gesamtenergie hat einen Median und anhand dessen kann ich doch auch bereits Ausreisser erkennen?
-
-    # gesamtenergien = get_energies(audio_dir, wavfiles)
-    # sieb_energien = gesamtenergien.drop_duplicates()
-
+    if not do_test_mode:
+        gesamtenergien = get_energies(audio_dir, wavfiles)
+        sieb_energien = gesamtenergien.drop_duplicates()
+    else:
+        sieb_energien = pandas.read_csv('gesamtdaten_energien.csv', index_col=0)
     ################################################
     # Plotte die Grundgesamtheit und dann jedes mal wieder nach dem Sieben mittels prognose
     ################################################
-    sieb_energien = pandas.read_csv('gesamtdaten_energien.csv', index_col=0)
-
     fig, ax = plt.subplots(3, 2, sharex='all')  # , sharey='all')
-    # ax=ax.ravel()
     pwr = sieb_energien['GesamtEnergie'].copy() / 2 ** 15
 
-    idx = 0
     ### TODO: Das hier muss an die richtige Stelle geschoben werden :-)
     if do_test_mode:
         plt.close('all')
 
         exit(1)
 
+    idx = 0
     while idx < 2:
         sieb_energien = sieb_energien.dropna()
         # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
