@@ -233,9 +233,11 @@ def get_energies(d, wavfiles):
     return df
 
 
-def prognose(data, gamma=0.95):
+def prognose(data, gamma=0.95, bereich='beide'):
     """
     Berechnung des Prognosebereichs
+    :param art:
+    :param gamma:
     :param data:
     :return:
     """
@@ -246,13 +248,27 @@ def prognose(data, gamma=0.95):
     data_std = np.std(data, ddof=1)
 
     Einheit_unit = 'W'
-
+    if bereich == 'rechts':
+        c = t.ppf((gamma), N - 1)
+        x_prog_max = data_mean + c * data_std * np.sqrt(1 + 1 / N)
+        print('Prognosewert: x', '>=\t', round(x_prog_max, 9), Einheit_unit)
+        return x_prog_max
+    if bereich == 'beide':
+        c1 = t.ppf((1 - gamma) / 2, N - 1)
+        c2 = t.ppf((1 + gamma) / 2, N - 1)
+        x_prog_min = data_mean + c1 * data_std * np.sqrt(1 + 1 / N)
+        x_prog_max = data_mean + c2 * data_std * np.sqrt(1 + 1 / N)
+        print('Prognosewert:', round(x_prog_min, 9), Einheit_unit, '< x <=', round(x_prog_max, 9), Einheit_unit)
+        return x_prog_min, x_prog_max
+    if bereich == 'links':
+        c1 = t.ppf((1 - gamma) / 2, N - 1)
+        c2 = t.ppf((1 + gamma) / 2, N - 1)
+        x_prog_min = data_mean + c1 * data_std * np.sqrt(1 + 1 / N)
+        print('Prognosewert: x', '<=\t', round(x_prog_min, 9), Einheit_unit)
+        return x_prog_min
+    else:
+        return 0
     # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
-    c = t.ppf((gamma), N - 1)
-    x_prog_max = data_mean + c * data_std * np.sqrt(1 + 1 / N)
-    print('Prognosewert: x', '<=\t', round(x_prog_max, 4), Einheit_unit)
-
-    return x_prog_max
 
 
 def getsecs(fromdf):
@@ -292,7 +308,7 @@ if __name__ == "__main__":
     ################################################
     print('hello World')
     do_plot = False  # Plotten der Graphen zum Debuggen
-    do_test_mode = False  # Diverse Beschleuniger
+    do_test_mode = True  # Diverse Beschleuniger
     do_play = False  # außer Betrieb
 
     plt.clf()
@@ -345,8 +361,21 @@ if __name__ == "__main__":
     # gesamtenergien = get_energies(audio_dir, wavfiles)
     # sieb_energien = gesamtenergien.drop_duplicates()
 
-    sieb_energien = pandas.read_csv('gesamtdaten_energien.csv', index_col=0) / 2 ** 15
+    ################################################
+    # Plotte die Grundgesamtheit und dann jedes mal wieder nach dem Sieben mittels prognose
+    ################################################
+    sieb_energien = pandas.read_csv('gesamtdaten_energien.csv', index_col=0)
+
+    fig, ax = plt.subplots(3, 2, sharex='all')  # , sharey='all')
+    # ax=ax.ravel()
+    pwr = sieb_energien['GesamtEnergie'].copy() / 2 ** 15
+
     idx = 0
+    ### TODO: Das hier muss an die richtige Stelle geschoben werden :-)
+    if do_test_mode:
+        plt.close('all')
+
+        exit(1)
 
     while idx < 2:
         sieb_energien = sieb_energien.dropna()
