@@ -92,8 +92,7 @@ def fn_plot(featvec, names, s):
         x += 1
     scat[7].plot(s)
     fig300.tight_layout()
-    fig300.show()
-    plt.close()
+    return fig300, scat
 
 
 def plot_energy(f, fn, filename):
