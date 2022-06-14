@@ -37,8 +37,8 @@ energie = df.iloc[:, 1]
 ''' Wichtig !!! 
     Erkenntnis:             Prognosewert
     0,3 < energie < 5,5 => 3.046427043731887
-    0,3 < energie < 8  => 3.1210158442267004
-    0,2 < energie < 20 => 3.1200215770101565
+    0,3 < energie < 8   => 3.1210158442267004
+    0,2 < energie < 20  => 3.1200215770101565
     0,3 < energie < 100 => 3.1993541276651527
     0,0 < energie < 800 => 3.2354675179262467 '''
     
@@ -61,7 +61,7 @@ ax.grid(True, which= 'both', axis='both', linestyle='--')
 ax.set_xlabel('Energie')
 ax.set_ylabel('Häufigkeit h(E)')
 #ax.set_ylim(top=0.25)
-ax.set_title(str(lower_lim) + ' < energie < ' + str(upper_lim))
+ax.set_title('vor Transformation mit ' + str(lower_lim) + ' < energie < ' + str(upper_lim))
 plt.tight_layout()
 
 
@@ -73,7 +73,7 @@ ax.grid(True, which= 'both', axis='both', linestyle='--')
 ax.set_xlabel('Energie')
 ax.set_ylabel('Häufigkeit h(E)')
 #ax.set_ylim(top=0.25)
-ax.set_title(str(lower_lim) + ' < energie < ' + str(upper_lim))
+ax.set_title('nach Transformation mit ' + str(lower_lim) + ' < energie < ' + str(upper_lim))
 plt.tight_layout()
 
 
