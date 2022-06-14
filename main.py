@@ -252,7 +252,7 @@ if __name__ == "__main__":
     do_plot = False  # Plotten der Graphen zum Debuggen
     do_test_mode = False  # Diverse Beschleuniger
     do_play = False  # außer Betrieb
-    on_ms_surface = True
+    on_ms_surface = False
 
     plt.clf()
     ################################################
@@ -295,7 +295,7 @@ if __name__ == "__main__":
     # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
-    csvlength = 20   # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
+    csvlength = 300  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
 
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
@@ -403,14 +403,15 @@ if __name__ == "__main__":
                 # Nehme den gefunden Index und schneide signal heraus in tmps
                 ################################################
                 olds, tmps, news = cut_signal(f, fn, signal)
-
                 ################################################
                 # Validierung des Tick Signals..
                 ################################################
 
+                if len(tmps) > 6720:
+                    tmps = tmps[:6720]
 
-                #zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
-                tickit = 'tick'+ str(iteration_over_file)
+                # zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
+                tickit = 'tick' + str(iteration_over_file)
                 ################################################
                 # Versuche das geschnittene Signal in die csv zu drücken.. Wenn es nicht, da nicht gleich lang so passt
                 # das Programm das geschnittene Signal an und füllt es mit einem konstanten Wert..
@@ -439,15 +440,19 @@ if __name__ == "__main__":
                 if len(tickSignal_liste) >= csvlength * 2:
                     outn = str(anzahlnochnicht ) + '-' + str(anzahl_bearbeitet) + "-output.csv"
                     tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen )
+
                     tsamples_df.head()
-                    tfdf = pd.DataFrame(tick_folge, columns=['tickfolge'],index=zeilennamen)
-                    conc = pd.concat([tfdf,tsamples_df], axis=1)
+                    tfdf = pd.DataFrame(tick_folge, columns=['tickfolge'], index=zeilennamen)
+                    conc = pd.concat([tfdf, tsamples_df], axis=1)
                     r = pd.merge(wfdf, conc, left_index=True, right_index=True)
-                    #r = conc.join(wfdf, how='inner', rsuffix='_other')
-                    #r = pd.merge(tfdf,tsamples_df, left_index=True, right_index=True, how='outer')
+                    # r = conc.join(wfdf, how='inner', rsuffix='_other')
+                    # r = pd.merge(tfdf,tsamples_df, left_index=True, right_index=True, how='outer')
 
                     r.drop_duplicates(inplace=True)
-                    #r = pd.DataFrame(tickSignal_liste, index=zeilennamen)
+                    # r = pd.DataFrame(tickSignal_liste, index=zeilennamen)
+
+                    if r.isnull().values.any():
+                        print('Achtung NaNs')
                     if not do_test_mode:
                         try:
                             output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
