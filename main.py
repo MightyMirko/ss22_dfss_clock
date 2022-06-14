@@ -31,10 +31,12 @@ plt.rcParams['figure.figsize'] = (12, 9)
 class ZeigerWinkel(Enum):
     """
     """
-    HOCH = 1
-    RUNTER = 2
-    UNSICHER1 = 3
-    UNSICHER2 = 4
+    OBEN = np.append(np.linspace(0, 7, 8, dtype=int),
+                     np.linspace(53, 59, 7, dtype=int)).tolist()
+    RECHTS = np.linspace(8, 22, 15, dtype=int).tolist()
+    UNTEN = np.linspace(23, 37, 15, dtype=int).tolist()
+    LINKS = np.linspace(38, 52, 15, dtype=int).tolist()
+
 
 
 def plotsounds(ax, data, abszisse, param_dict=None, filename='N/A', samplerate=48000, log=True,
@@ -135,7 +137,7 @@ def process_folder(audiofile, audio_dir, win=0.005, step=0.005):
     duration = len(signal) / float(fs)
     time = np.arange(0, duration - step, win)
     # extract short-term features using a 50msec non-overlapping windows
-    [f, fn] = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
+    f, fn = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
 
     return f, fn, fs, signal
 
@@ -183,7 +185,7 @@ def get_energies(d, wavfiles):
     for idx in range(len(file_list)):
         # einlesen
         fn = file_list[idx]
-        samplerate, data = wavfile.read(d + ('\\') + file_list[idx])
+        samplerate, data = wavfile.read(d + ('\\') + file_list[idx], mmap=True)
         # Berechnung
         signal_2 = data ** 2
         energie[idx] = signal_2.sum()
@@ -244,22 +246,22 @@ def getsecs(fromdf):
         dat = os.path.basename(row_index).lstrip()
         dat = dat.split(".")[0]
         date_string = datetime.strptime(dat, form)
-        sekzeiger = date_string.second
-        status = "'"
-        try:
-            if not sekzeiger <= 0 and sekzeiger < 3:
-                status = ZeigerWinkel(3)
-            if not sekzeiger <= 3 and sekzeiger < 27:
-                status = ZeigerWinkel(2)
-            if not sekzeiger <= 27 and sekzeiger < 33:
-                status = ZeigerWinkel(4)
-            if not sekzeiger <= 33 and sekzeiger < 57:
-                status = ZeigerWinkel(2)
-            if not sekzeiger <= 57 and sekzeiger < 0:
-                status = ZeigerWinkel(3)
-        except:
-            pass
-        dt_list.append((date_string, status))
+        Zeiger = date_string.second
+        out =''
+        if (Zeiger >= 0) and (Zeiger < 7.5):
+            out = 'oben'
+        elif (Zeiger > 7.5) and (Zeiger < 22.5):
+            out = 'rechts'
+        elif (Zeiger > 22.5) and (Zeiger < 37.5):
+            out = 'unten'
+        elif (Zeiger > 37.5) and (Zeiger < 52.5):
+            out = 'links'
+        elif (Zeiger > 52.5) and (Zeiger < 60):
+            out = 'oben'
+        else:
+            out = 'Fehler!!!'
+        print(out)
+        dt_list.append((date_string, out))
 
     dtdf = pandas.DataFrame(dt_list, index=fromdf.index, columns=['rectime', 'ZeigerWinkel'])
     return dtdf
@@ -272,14 +274,16 @@ if __name__ == "__main__":
     ################################################
     print('hello World')
     do_plot = False  # Plotten der Graphen zum Debuggen
-    do_test_mode = True  # Diverse Beschleuniger
+    do_test_mode = False  # Diverse Beschleuniger
     do_play = False  # außer Betrieb
+    on_ms_surface = True
 
     plt.clf()
     ################################################
     # Arbeits Variablen
     ################################################
-    csv_exp = []  # Der exportierende
+    tickSignal_liste = []  # Der exportierende
+    tick_folge = []
     zeilennamen = []
     errata = []
     audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
@@ -287,7 +291,7 @@ if __name__ == "__main__":
     ################################################
     # Überprüfung
     ################################################
-    if do_test_mode:
+    if do_test_mode or on_ms_surface:
         audio_dir = r'data'
     else:
         if not os.path.exists(audio_dir):
@@ -315,7 +319,7 @@ if __name__ == "__main__":
     # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
-    csvlength = 300  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
+    csvlength = 3  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
 
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
@@ -323,65 +327,72 @@ if __name__ == "__main__":
     # gesamtenergie hat einen Median und anhand dessen kann ich doch auch bereits Ausreisser erkennen?
     if not do_test_mode:
         gesamtenergien = get_energies(audio_dir, wavfiles)
-        sieb_energien = gesamtenergien.drop_duplicates()
     else:
-        sieb_energien = pandas.read_csv('gesamtdaten_energien.csv', index_col=0)
+        gesamtenergien = pandas.read_csv('gesamtdaten_energien.csv', index_col=(0))
+
+    pwr = gesamtenergien.drop_duplicates()
+    sauber_index = pwr.index.str.lstrip()
+    pwr.set_index(sauber_index)
+
     ################################################
     # Plotte die Grundgesamtheit und dann jedes mal wieder nach dem Sieben mittels prognose
     ################################################
     fig, ax = plt.subplots(3, 2, sharex='all')  # , sharey='all')
-    pwr = sieb_energien['GesamtEnergie'].copy()
-
-    qu = sieb_energien['GesamtEnergie'].quantile(0.1)
-    qo = sieb_energien['GesamtEnergie'].quantile(0.999)
+    #############################################
+    # entweder über Quantile oder harter Schwellenwert..
+    qu = pwr['GesamtEnergie'].quantile(0.1)
+    qo = pwr['GesamtEnergie'].quantile(0.999)
     v=pwr.shape[0]
-    minimalschwellle = qu  # eigentlich lieber mit der fft für frequenzen kleiner 300 Hz
-    maximalschwelle = qo# nur einen rauskicken
+    minimalschwellle = 0.3  # eigentlich lieber mit der fft für frequenzen kleiner 300 Hz
+    maximalschwelle = 100
+
     for x in pwr.index:
-        if pwr.loc[x] > minimalschwellle and pwr.loc[x] < maximalschwelle:  # or pwr.loc[x] < progmin:
+        nrg = pwr.loc[x][0]
+        if nrg > minimalschwellle and nrg < maximalschwelle:  # or pwr.loc[x] < progmin:
             pass
         else:
             pwr.drop(x, inplace=True)
+
     rausgeworfen = v - pwr.shape[0]
+
     if rausgeworfen == 0:
         print('Keine ausgesiebt')
     else :
         print('{} Audiofiles rausgeworfen'.format(rausgeworfen))
 
-    pwr_box = pwr.copy()
-
-    ### TODO: Das hier muss an die richtige Stelle geschoben werden :-) Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen
-    if do_test_mode:
-        plt.close('all')
-        exit(1)
+    #pwr = pwr.copy()
 
     idx = 0
-    while idx < 2:
-        sieb_energien = sieb_energien.dropna()
+    while idx < 1:
+        pwr = pwr.dropna()
         # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
         if idx < 1:
-            progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy(), gamma=0.997)
+            progmax = prognose(pwr.to_numpy(), gamma=0.997, bereich='rechts')
         else:
-            progmax = prognose(sieb_energien[["GesamtEnergie"]].to_numpy(), gamma=0.95)
+            progmax = prognose(pwr.to_numpy(), gamma=0.95, bereich ='rechts')
 
         # siebe nun anhand der prognostizierten Schwellenwerte.
-        for x in sieb_energien.index:
-            if sieb_energien.loc[x, "GesamtEnergie"] > progmax:
-                sieb_energien.drop(x, inplace=True)
+        for x in pwr.index:
+            nrg = pwr.loc[x][0]
+            if nrg > progmax:
+                pwr.drop(x, inplace=True)
         idx += 1
-        print(sieb_energien.shape[0])
+        print(pwr.shape[0])
 
     # sieb_energien.to_csv('sieb.csv', index=True)
-    wavfiles = sieb_energien.copy()
-    wavfiles = wavfiles.join(getsecs(wavfiles))
+    print(pwr.head())
+    wfdf = pwr.copy()
+    print(wfdf.head(n=1))
+    wfdf = wfdf.join(getsecs(wfdf))
+    print(wfdf.head())
+    wfdf.head()
 
     ################################################
     # Untersuchen des Signals und Fenstern
     ################################################
     win, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
     if not do_test_mode:
-        # if do_test_mode:
-        for audiofile, row in sieb_energien.iterrows():
+        for audiofile, row in wfdf.iterrows():
             # audiofile =  audiofile.lstrip()
             anzahl_bearbeitet += 1
             anzahlnochnicht -= 1
@@ -389,6 +400,7 @@ if __name__ == "__main__":
             ################################################
             # Laufe 2x über das Signal. Es stecken meistens 2 Ticks pro File
             ################################################
+
             while iteration_over_file < 2:
                 txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
                                                                                 anzahl,
@@ -396,23 +408,39 @@ if __name__ == "__main__":
                 txt1 = ('Bearbeiten von {}.').format(audiofile)
                 print(txt, '\n', txt1)
                 ################################################
+                # Rolling Window
+                ################################################
+                f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
+
+                time = np.linspace(0., len(signal) / float(fs), len(signal))
+                duration = len(signal) / float(fs)
+                timew = np.arange(0, duration - step, win)
+
+                ################################################
                 # Nehme den gefunden Index und schneide signal heraus in tmps
                 ################################################
                 olds, tmps, news = cut_signal(f, fn, signal)
 
-                zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
-                zeilennamen.append(zeile)
 
+                ################################################
+                # Validierung des Tick Signals..
+                ################################################
+
+
+                #zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
+                tickit = 'tick'+ str(iteration_over_file)
                 ################################################
                 # Versuche das geschnittene Signal in die csv zu drücken.. Wenn es nicht, da nicht gleich lang so passt
                 # das Programm das geschnittene Signal an und füllt es mit einem konstanten Wert..
                 #
                 ################################################
                 try:
-                    csv_exp.append(tmps)
+                    tick_folge.append(tickit)
+                    tickSignal_liste.append(tmps)
+                    zeilennamen.append(audiofile)
                 except ValueError:
-                    errata.append((zeile,tmps))
-                    print('Diese Datei muss näher untersucht werden:\t' + zeile)
+                    errata.append((audiofile,tmps, 'Randwert'))
+                    print('Diese Datei muss näher untersucht werden:\t' + audiofile)
                     # Tatsächlich habe ich die Dateien bereits verworfen gehabt.. aber dann doch wieder eingebaut..
                     # try:
                     #    angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
@@ -422,19 +450,28 @@ if __name__ == "__main__":
                 ################################################
                 # Export der csv datei wenn länger als x
                 ################################################
-                if len(csv_exp) >= csvlength * 2:
+                if len(tickSignal_liste) >= csvlength * 2:
                     outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
-                    df = pd.DataFrame(csv_exp, index=zeilennamen)
+                    tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen )
+                    tsamples_df.head()
+                    tfdf = pd.DataFrame(tick_folge, columns=['tickfolge'],index=zeilennamen)
+                    conc = pd.concat([tfdf,tsamples_df], axis=1)
+                    r = pd.merge(wfdf, conc, left_index=True, right_index=True)
+                    #r = conc.join(wfdf, how='inner', rsuffix='_other')
+                    #r = pd.merge(tfdf,tsamples_df, left_index=True, right_index=True, how='outer')
+
+                    r.drop_duplicates(inplace=True)
+                    #r = pd.DataFrame(tickSignal_liste, index=zeilennamen)
                     if not do_test_mode:
                         try:
                             output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                            df.to_csv(output, index=True)
+                            r.to_csv(output, index=True)
                         except PermissionError:
                             outn = 'io_hand' + outn
                             output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                            df.to_csv(output, index=True)
-                        df = pd.DataFrame()
-                        csv_exp, zeilennamen = [], []
+                            r.to_csv(output, index=True)
+                        r = pd.DataFrame()
+                        tickSignal_liste, tick_folge, zeilennamen = [], [], []
 
                 ################################################
                 # Setzen vor Rekursion Ende
@@ -453,6 +490,10 @@ if __name__ == "__main__":
 
     print('bye world')
 
+    ### TODO: Das hier muss an die richtige Stelle geschoben werden :-) Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen
+    if do_test_mode:
+        plt.close('all')
+        exit(1)
 '''
 The join() method inserts column(s) from another DataFrame, or Series.
 '''
