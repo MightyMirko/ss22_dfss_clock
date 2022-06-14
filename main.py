@@ -118,31 +118,7 @@ def plot_energy(f, fn, filename):
         i.grid()
     fig1.show()
 
-
-def process_folder(audiofile, audio_dir, win=0.005, step=0.005):
-    """
-
-    :param audiofile: muss sanitized sein
-    :param audio_dir: muss sanitized sein
-    :param win:
-    :param step:
-    :return:
-    """
-
-    audiofile = os.path.join(audio_dir + "\\" + audiofile)
-    fs, signal = aIO.read_audio_file(audiofile)
-    ###############
-    # Anlegen der Variablen
-    ###############
-    duration = len(signal) / float(fs)
-    time = np.arange(0, duration - step, win)
-    # extract short-term features using a 50msec non-overlapping windows
-    f, fn = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
-
-    return f, fn, fs, signal
-
-
-def cut_signal(f, fn, s):
+def cut_signal(f, fn, s, fs =48000):
     energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
     d_energy = f[fn.index('delta energy'), :]
     dd_energy = np.diff(d_energy)
@@ -319,7 +295,7 @@ if __name__ == "__main__":
     # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
-    csvlength = 3  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
+    csvlength = 20   # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
 
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
@@ -400,6 +376,8 @@ if __name__ == "__main__":
             ################################################
             # Laufe 2x über das Signal. Es stecken meistens 2 Ticks pro File
             ################################################
+            filepath = os.path.join(audio_dir + "\\" + audiofile)
+            fs, signal = aIO.read_audio_file(filepath)
 
             while iteration_over_file < 2:
                 txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
@@ -410,10 +388,16 @@ if __name__ == "__main__":
                 ################################################
                 # Rolling Window
                 ################################################
+                ###############
+                # Anlegen der Variablen
+                ###############
                 f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
 
                 time = np.linspace(0., len(signal) / float(fs), len(signal))
                 duration = len(signal) / float(fs)
+                time = np.arange(0, duration - step, win)
+                # extract short-term features using a 50msec non-overlapping windows
+                f, fn = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
                 timew = np.arange(0, duration - step, win)
 
                 ################################################
@@ -450,8 +434,12 @@ if __name__ == "__main__":
                 ################################################
                 # Export der csv datei wenn länger als x
                 ################################################
+               #TODO: wenn Daten nicht mehr langen....
+                # #if wfdf.loc[audiofile] == wfdf.iloc[-1]:
+               #    print("Ende")
+
                 if len(tickSignal_liste) >= csvlength * 2:
-                    outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
+                    outn = str(anzahlnochnicht ) + '-' + str(anzahl_bearbeitet) + "-output.csv"
                     tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen )
                     tsamples_df.head()
                     tfdf = pd.DataFrame(tick_folge, columns=['tickfolge'],index=zeilennamen)
@@ -519,3 +507,6 @@ if __name__ == "__main__":
 '''
 The join() method inserts column(s) from another DataFrame, or Series.
 '''
+# https://stackoverflow.com/questions/41705776/combine-two-dataframes-with-same-index-unordered
+# https://stackoverflow.com/questions/28773683/combine-two-pandas-dataframes-with-the-same-index
+# TODO: https://de.wikipedia.org/wiki/Zentrierung_(Statistik)
