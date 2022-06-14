@@ -395,16 +395,6 @@ if __name__ == "__main__":
                                                                                 iteration_over_file + 1)
                 txt1 = ('Bearbeiten von {}.').format(audiofile)
                 print(txt, '\n', txt1)
-
-                ################################################
-                # Rolling Window
-                ################################################
-                f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
-
-                time = np.linspace(0., len(signal) / float(fs), len(signal))
-                duration = len(signal) / float(fs)
-                timew = np.arange(0, duration - step, win)
-
                 ################################################
                 # Nehme den gefunden Index und schneide signal heraus in tmps
                 ################################################
