@@ -28,9 +28,10 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import LabelEncoder
 
 
-
+# Daten einlesen
 DATA_FILE_TRAIN = 'gesamtdaten_energien.csv'
 df = pd.read_csv(DATA_FILE_TRAIN, header=0)
+# Datenübertragen
 energie = df.iloc[:, 1]
 
 ''' Wichtig !!! 
@@ -41,8 +42,6 @@ energie = df.iloc[:, 1]
     0,3 < energie < 100 => 3.1993541276651527
     0,0 < energie < 800 => 3.2354675179262467 '''
     
-# Datenübertragen
-
 # Vorselektieren
 upper_lim = 800
 lower_lim = 0.0
