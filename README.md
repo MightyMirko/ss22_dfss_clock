@@ -54,6 +54,44 @@ Bild 3:
 
 Das Bild [fig3] zeigt die Fourier-transformierte einer durch das Butterworth-Filter angepasste Sound-Datei. Diese Datei ist 11.5 Sekunden lang und beeinhaltet häufige Frequenzen um 2kHz und 7 kHz.
 
+### from scipy import wavfile
+
+Dies ist eine Bibliothek die im allgemeinen zum Lesen und Schreiben von WAV Dateien genutzt wird. 
+
+Hierzu wird ein Array mit dem Pfad zu den zu untersuchenden WAV Dateien angelegt. Mittels Schleifenoperation lassen sich die einzelnen Dateien nun von der '''read(audiofile, mmap = True/False)''' einlesen. Die Ausgabewerte beinhalten bei den vorliegenden Dateien:
+| Name         | Wert     | Datentyp |
+|--------------|-----------|------------|
+| samplerate | 48000      | unsigned int        |
+| Bananas      | **96000**  | Float32 von -1 bis +1 im numpy.array   |
+
+> Aus der WAV-Datei gelesene Daten. Der Datentyp wird aus der Datei bestimmt; siehe Anmerkungen.  Die Daten sind 1-D für 1-Kanal-WAV, oder 2-D der Form (Nsamples, NKanäle) sonst. Wenn eine dateiähnliche Eingabe ohne einen C-ähnlichen Dateideskriptor (z.B. :class:`python:io.BytesIO`) übergeben wird übergeben, ist diese nicht beschreibbar. [scipy - dokumentation]
+
+
+#### **Parameter im Signal**
+Signaltiefe/Bandbreite/ im Signal
+
+> Die Samplingtiefe, auch Bittiefe genannt, gibt die Anzahl der Bits an, die bei der Quantisierung eines analogen Signals pro Abtastwert (=Sample) verwendet werden. Sie bestimmt, in wie vielen Abstufungen die Amplitude repr{\"a}sentiert werden kann. Die Samplingtiefe ist neben der Samplingrate der zweite Parameter, durch den der Digitalisierungsvorgang beschrieben wird.
+[Samplingtiefe2020](https://de.wikipedia.org/w/index.php?title=Samplingtiefe&oldid=201136951)
+
+Die aufgenommenen Dateien wurden von scipy und Audacity als 32-bit floating-point erfasst. 
+
+|WAV format   | Min | Max |  NumPy dtype
+|--------------|-----------|------------|---|
+| 32-bit floating-point  |-1.0        | +1.0        | float32
+| 32-bit integer PCM     |-2147483648 | +2147483647 | int32
+| 24-bit integer PCM     |-2147483648 | +2147483392 | int32
+| 16-bit integer PCM     |-32768      | +32767      | int16
+| 8-bit integer PCM      |0           | 255         | uint8
+
+> WAV-Dateien können eine beliebige Bittiefe angeben, und diese Funktion unterstützt das Lesen jeder ganzzahligen PCM-Tiefe von 1 bis 64 Bit.  Die Daten werden in dem kleinsten kompatiblen numpy int-Typ zurückgegeben, im linksbündigen Format. 8-Bit und  niedriger ist vorzeichenlos, während 9-Bit und höher vorzeichenbehaftet ist.
+
+### Aufbau der csv Datei
+
+dateiname/index, klasse, Aufnahmezeit im dateformat ,0,1,...,6720/2 (downgesampled)
+20200905_16_10_21_tick0, unten/oben/rechts/links
+20200905_16_10_21_tick1, unten/oben/rechts/links
+
+
 
 
 ## Theorie
@@ -77,9 +115,6 @@ app.diagrams.net
 FFT ist nun also die Summe aller sinus Funktionen normalisiert auf die Menge aller Datenpunkte N. 
 
 $A(f_k) = \frac{1}{N} \sum_{n=0}^{N-1} a(t_n) e^{-i \frac{2 \pi kn}{N}}$
-
-
-
 
 
 ## Source
