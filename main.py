@@ -391,7 +391,6 @@ if __name__ == "__main__":
                 ###############
                 # Anlegen der Variablen
                 ###############
-                f, fn, fs, signal = process_folder(audiofile, audio_dir, win, step)
 
                 time = np.linspace(0., len(signal) / float(fs), len(signal))
                 duration = len(signal) / float(fs)
@@ -404,7 +403,6 @@ if __name__ == "__main__":
                 # Nehme den gefunden Index und schneide signal heraus in tmps
                 ################################################
                 olds, tmps, news = cut_signal(f, fn, signal)
-
 
                 ################################################
                 # Validierung des Tick Signals..
@@ -434,7 +432,7 @@ if __name__ == "__main__":
                 ################################################
                 # Export der csv datei wenn länger als x
                 ################################################
-               #TODO: wenn Daten nicht mehr langen....
+                # TODO: wenn Daten für vollständige CSV nicht mehr langen, dann sollte dies ebenfalls behandelt werden
                 # #if wfdf.loc[audiofile] == wfdf.iloc[-1]:
                #    print("Ende")
 
