@@ -485,7 +485,29 @@ if __name__ == "__main__":
                 # achtung while Schleife ende
                 ################################################
 
-   
+    outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
+    tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen)
+    tsamples_df.head()
+    tfdf = pd.DataFrame(tick_folge, columns=['tickfolge'], index=zeilennamen)
+    conc = pd.concat([tfdf, tsamples_df], axis=1)
+    r = pd.merge(wfdf, conc, left_index=True, right_index=True)
+    # r = conc.join(wfdf, how='inner', rsuffix='_other')
+    # r = pd.merge(tfdf,tsamples_df, left_index=True, right_index=True, how='outer')
+
+    r.drop_duplicates(inplace=True)
+    # r = pd.DataFrame(tickSignal_liste, index=zeilennamen)
+    if not do_test_mode:
+        try:
+            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+            r.to_csv(output, index=True)
+        except PermissionError:
+            outn = 'io_hand' + outn
+            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+            r.to_csv(output, index=True)
+        r = pd.DataFrame()
+        tickSignal_liste, tick_folge, zeilennamen = [], [], []
+
+
     plt.close('all')
 
     print('bye world')
