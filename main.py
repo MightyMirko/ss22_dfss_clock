@@ -212,7 +212,7 @@ def prognose(data, gamma=0.95, bereich='beide'):
     # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
 
 
-def getsecs(fromdf):
+def get_zeigerwinkel(fromdf):
     '''
 
     :param fromdf:
@@ -256,8 +256,8 @@ if __name__ == "__main__":
     do_test_mode = False  # Diverse Beschleuniger
     do_play = False  # außer Betrieb
     on_ms_surface = True
-
     plt.clf()
+
     ################################################
     # Arbeits Variablen
     ################################################
@@ -364,7 +364,7 @@ if __name__ == "__main__":
     print(pwr.head())
     wfdf = pwr.copy()
     print(wfdf.head(n=1))
-    wfdf = wfdf.join(getsecs(wfdf))
+    wfdf = wfdf.join(get_zeigerwinkel(wfdf))
     print(wfdf.head())
     wfdf.head()
 
