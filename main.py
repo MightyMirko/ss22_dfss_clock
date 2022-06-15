@@ -279,26 +279,24 @@ if __name__ == "__main__":
     ################################################
     # Anlegen der Variablen und Wav-Liste
     ################################################
-
     duration = 0
     timew = 0
     iteration_over_file = 0
     anzahl_bearbeitet = 0
     wavfiles = []
-    ################################################
-    # Desinfizieren der Wavliste
-    ################################################
 
+    ################################################
+    # Anlegen und holen aller Daten aus der audioDir, dann Desinfizieren der Wavliste
+    ################################################
     with os.scandir(audio_dir) as it:
         for entry in it:
             if entry.name.endswith('.wav') and entry.is_file():
                 wavfiles.append(entry.name)
-
     # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
-    csvlength = 300  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
     wavfiles = np.random.choice(wavfiles,5)
+
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
     ################################################
