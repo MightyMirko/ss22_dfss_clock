@@ -16,7 +16,6 @@ import numpy as np
 import pandas
 import pandas as pd
 from pyAudioAnalysis import ShortTermFeatures as aF
-from pyAudioAnalysis import audioBasicIO as aIO
 from scipy.io import wavfile
 from scipy.stats import t
 
@@ -253,7 +252,7 @@ if __name__ == "__main__":
     ################################################
     print('hello World')
     do_plot = False  # Plotten der Graphen zum Debuggen
-    do_test_mode = False  # Diverse Beschleuniger
+    do_test_mode = True  # Diverse Beschleuniger
     do_play = False  # außer Betrieb
     on_ms_surface = True
     plt.clf()
@@ -294,11 +293,13 @@ if __name__ == "__main__":
         for entry in it:
             if entry.name.endswith('.wav') and entry.is_file():
                 wavfiles.append(entry.name)
+
+    wavfiles = np.asarray(wavfiles)
     # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
-    wavfiles = np.random.choice(wavfiles,5)
-
+    #wavfiles = np.random.choice(wavfiles,5)
+    signals = []
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
     ################################################
@@ -323,18 +324,46 @@ if __name__ == "__main__":
     # Untersuchen des Signals und Fenstern
     ################################################
     win, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
-    if not do_test_mode:
-        for audiofile, row in wfdf.iterrows():
-            audiofile =  audiofile.lstrip()
+    timew = np.arange(0, duration - step, win)
+    if do_test_mode:
+
+        ################################################
+        # Erste for schleife um die Grundgesamtheit GG zu sammeln und zu lesen
+        ################################################
+        for audiofile in wavfiles:
             anzahl_bearbeitet += 1
             anzahlnochnicht -= 1
-            iteration_over_file = 0
+
+            audiofile =  audiofile.lstrip()
+            filepath = os.path.join(audio_dir, audiofile)
+            fs, signal = wavfile.read(os.path.join(audio_dir, audiofile), mmap=True)
+            signals.append(signal)
+
+        ################################################
+        # Zweite Schleife um GG zu verkleinern
+        ################################################
+        asarr = np.asarray(signals)
+        nrg = np.sum(asarr**2, axis=1)
+
+        ### Bis hierhin ist neu geschrieben..
+        #TODO: Das hier muss an die richtige Stelle geschoben werden :-)
+        # Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen
+
+        if do_test_mode:
+            plt.close('all')
+            exit(1)
+
+        kleinereGG = 1
+
+        for audiofile in kleinereGG:
+            # extract short-term features using non-overlapping windows
+            f, fn = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
+            print(f[fn[0]])
             ################################################
             # Laufe 2x über das Signal. Es stecken meistens 2 Ticks pro File
             ################################################
-            filepath = os.path.join(audio_dir + "\\" + audiofile)
-            fs, signal = aIO.read_audio_file(filepath)
 
+            iteration_over_file = 0
             while iteration_over_file < 2:
                 txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
                                                                                 anzahl,
@@ -350,10 +379,7 @@ if __name__ == "__main__":
 
                 time = np.linspace(0., len(signal) / float(fs), len(signal))
                 duration = len(signal) / float(fs)
-                time = np.arange(0, duration - step, win)
-                # extract short-term features using a 50msec non-overlapping windows
-                f, fn = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
-                timew = np.arange(0, duration - step, win)
+
 
                 ################################################
                 # Nehme den gefunden Index und schneide signal heraus in tmps
@@ -465,10 +491,6 @@ if __name__ == "__main__":
 
     print('bye world')
 
-    ### TODO: Das hier muss an die richtige Stelle geschoben werden :-) Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen
-    if do_test_mode:
-        plt.close('all')
-        exit(1)
 '''
 The join() method inserts column(s) from another DataFrame, or Series.
 '''
