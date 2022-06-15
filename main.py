@@ -24,19 +24,19 @@ plt.rcParams['figure.figsize'] = (12, 9)
 
 
 def cut_signal(energy, signal, win=0.05, fs=48000,
-               davorinms = 0.04,
-               danachinms = 0.1):
+               davor_insek = 0.04,
+               danach_insek = 0.1):
     """
     TODO: Funktion sollte auf integer umgebaut werden
 
     Diese Funktion nimmt den Energie Vector der vorher erstellt worden ist, leitet diesen ab und detektiert die
     Stelle (indexofpeak) wo das Maximum ist (quasi die x = y.max()). Dann wird geschnitten, anhand der Anzahl Samples
     zurück und vor, in Abhängigkeit der Samplerate
-    :param davorinms: Wie viele Sekunden vor dem Ticken soll geschnitten werden
-    :param danachinms: Wieviel Sekunden danach
+    :param davor_insek: Wie viele Sekunden vor dem Ticken soll geschnitten werden
+    :param danach_insek: Wieviel Sekunden danach
     :param energy: Vector der Energie
     :param signal: Signal (numpy array)
-    :param win:
+    :param win: Fensterbreite des Energie_vektors
     :param fs: samplerate
     :return:
     """
@@ -44,8 +44,8 @@ def cut_signal(energy, signal, win=0.05, fs=48000,
     indexofpeak = d_energy.argmax()  # Wo ist das Maximum
     peak_in_ms = win * indexofpeak
 
-    back_in_ms = peak_in_ms - davorinms
-    adv_in_ms = peak_in_ms + danachinms
+    back_in_ms = peak_in_ms - davor_insek
+    adv_in_ms = peak_in_ms + danach_insek
 
     back_in_sample = int(fs * back_in_ms)
     adv_in_sample = int(fs * adv_in_ms)
