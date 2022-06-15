@@ -210,7 +210,7 @@ if __name__ == "__main__":
     wavfiles = []
     csvlength = 300  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
     signals = []
-
+    ticks = []
     ################################################
     # Anlegen und holen aller Daten aus der audioDir, dann Desinfizieren der Wavliste
     ################################################
@@ -247,6 +247,7 @@ if __name__ == "__main__":
     window, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
     duration = 2
     timew = np.arange(0, duration - step, window)
+
     if do_test_mode:
         ################################################
         # Erste for schleife um die Grundgesamtheit GG zu sammeln und zu lesen
@@ -273,6 +274,10 @@ if __name__ == "__main__":
             ################################################
             # Downsampling
             ################################################
+
+            ################################################
+            # Extrahiere Tick
+            ################################################
             i = 1
             while i < tickanzahl:
                 ################################################
@@ -283,11 +288,13 @@ if __name__ == "__main__":
                 ################################################
                 # Finde den Tick..
                 ################################################
-                olds, tmps, news = cut_signal(feat[0], signal)
-                i+=1
+                olds, tmps, news = cut_signal(feat, signal)
+                signal = news
+                ticks.append((i, audiofile,tmps))
+                i += 1
 
-        asarr = np.asarray(signals)
-        nrg = np.sum(asarr ** 2, axis=1)
+
+
         # TODO: Das hier muss an die richtige Stelle geschoben werden :-)
         # Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen
 
