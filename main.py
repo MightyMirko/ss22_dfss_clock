@@ -244,18 +244,20 @@ if __name__ == "__main__":
         ################################################
         # Erste for schleife um die Grundgesamtheit GG zu sammeln und zu lesen
         ################################################
+        i = 0
+        tickanzahl =2
         for audiofile in wavfiles:
             anzahl_bearbeitet += 1
             anzahlnochnicht -= 1
 
             audiofile = audiofile.lstrip()
             filepath = os.path.join(audio_dir, audiofile)
-            fs, signal = wavfile.read(os.path.join(audio_dir, audiofile), mmap=True)
+            fs, signal = wavfile.read(os.path.join(audio_dir, audiofile))#, mmap=True)
             ################################################
             # Berechnung der Gesamtenergie und anschließendes Kicken. Eventuell kann man vorher downsamplen?
             ################################################
-            signal_vector = np.asarray(signal)
-            nrg = np.sum(signal_vector ** 2, axis=0)
+            # mmap = np.asarray(signal)
+            nrg = np.sum(signal ** 2, axis=0)
             if nrg <= progmin and nrg > progmax:
                 pass  # hier kann der prognose bereich schonmal kommen :)
             else:
@@ -264,17 +266,18 @@ if __name__ == "__main__":
             ################################################
             # Downsampling
             ################################################
-
-            ################################################
-            # Frame Analyse / Rolling Window
-            ################################################
-            feat = extract_params(signal_vector,window,step)
-            signals.append(signal_vector)
-            ################################################
-            # Finde den Tick..
-            ################################################
-            olds, tmps, news = cut_signal(feat[0], signal_vector)
-
+            i = 1
+            while i < tickanzahl:
+                ################################################
+                # Frame Analyse / Rolling Window
+                ################################################
+                feat = extract_params(signal,window,step)
+                signals.append(signal)
+                ################################################
+                # Finde den Tick..
+                ################################################
+                olds, tmps, news = cut_signal(feat[0], signal)
+                i+=1
 
         asarr = np.asarray(signals)
         nrg = np.sum(asarr ** 2, axis=1)
