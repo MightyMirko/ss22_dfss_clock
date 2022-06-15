@@ -40,10 +40,17 @@ def getTicks_fromSignal(energy, signal, win=0.05, fs=48000,
     :return:
     """
 
-    d_energy = np.diff(energy)
+    d_energy = np.diff(energy) ## TODO alle ticks mit sauberer Stichprobe und dreckiger STichprobe untersuchen
     indexofpeak = d_energy.argmax()  # Wo ist das Maximum
     cutback_samples = indexofpeak - samples_before
     cutfwd_samples =  indexofpeak + samples_after
+
+
+    tt = np.arange(0, len(d_energy), 1)
+    plt.plot(tt,d_energy)
+    #plt.plot(np.arange(0,2*fs/len(d_energy),1),signal)
+    plt.show()
+    plt.close()
 
     if cutback_samples <= 0:
         raise ValueError
@@ -288,7 +295,16 @@ if __name__ == "__main__":
                 ################################################
                 # Finde den Tick..
                 ################################################
-                olds, tmps, news = getTicks_fromSignal(feat, signal)
+                try:
+                    olds, tmps, news = getTicks_fromSignal(feat, signal)
+                except ValueError:
+                    tt = np.arange(0, 96000, 1)
+                    plt.plot(tt, signal)
+                    plt.title = audiofile
+                    plt.show()
+                    plt.close()
+                    break
+
                 signal = news
                 ticks.append((audiofile,i,tmps))
                 i += 1
