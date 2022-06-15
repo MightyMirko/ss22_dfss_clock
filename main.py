@@ -24,8 +24,8 @@ plt.rcParams['figure.figsize'] = (12, 9)
 
 
 def cut_signal(energy, signal, win=0.05, fs=48000,
-               davor_insek = 0.04,
-               danach_insek = 0.1):
+               davor_insek=0.04,
+               danach_insek=0.1):
     """
     TODO: Funktion sollte auf integer umgebaut werden
 
@@ -124,9 +124,51 @@ def Klassenzuweisung(sec_wert):
 
 def energy(frame):
     """Computes signal energy of frame"""
-    out = np.sum(frame ** 2)
-    out /= np.float64(len(frame))
+    out = 0
+    try:
+        out = np.sum(frame ** 2)
+        a = np.float64(len(frame))
+        out /= a
+    except:
+        print(a, out)
+
     return out
+
+
+def extract_params(signal, pwin, pstep):
+    '''
+    Habe hier mein eigenes Rolling Window nur für die Energie geschrieben.
+    Dann werden auch keine 67 andere Feature geschrieben, sondern nur die relevanten
+    :param signal:
+    :param pwin:
+    :param pstep:
+    :return:
+    '''
+    number_of_samples = len(signal)  # total number of samples
+    current_position = 0
+    count_fr = 0
+    num_fft = int(pwin / 2)
+    features = []
+    window = int(pwin)
+    step = int(pstep)
+
+    while current_position + window - 1 < number_of_samples:
+        count_fr += 1
+        # get current window
+        x = signal[current_position:current_position + window]
+        # update window position
+        current_position = current_position + pstep
+        # short-term energy
+        features.append(energy(x))
+    return features
+
+
+def check_dir(directory, testmode = True):
+    if testmode:
+        directory = r'data'
+    elif not os.path.exists(directory):
+        raise IOError
+    return directory
 
 
 if __name__ == "__main__":
@@ -152,23 +194,15 @@ if __name__ == "__main__":
     ################################################
     # Zuweisung und Überprüfung des Ordners anhand verschiedener Test-Variablen
     ################################################
-    audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
-    if do_test_mode or on_ms_surface:
-        audio_dir = r'data'
-    else:
-        if not os.path.exists(audio_dir):
-            raise IOError
-        else:
-            audio_dir = audio_dir
+    audio_dir = check_dir(r'H:\Messung_BluetoothMikro\Messung 3\Audios', testmode=do_test_mode)
     ################################################
     # Anlegen der Variablen und Wav-Liste
     ################################################
-    duration = 0
-    timew = 0
     iteration_over_file = 0
     anzahl_bearbeitet = 0
     wavfiles = []
     csvlength = 300  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
+    signals = []
 
     ################################################
     # Anlegen und holen aller Daten aus der audioDir, dann Desinfizieren der Wavliste
@@ -183,16 +217,12 @@ if __name__ == "__main__":
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
     # wavfiles = np.random.choice(wavfiles,5)
-    signals = []
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
     ################################################
-
     ################################################
     # Plotte die Grundgesamtheit und dann jedes mal wieder nach dem Sieben mittels prognose
     ################################################
-    # fig, ax = plt.subplots(3, 2, sharex='all')  # , sharey='all')
-
     ################################################
     # Harken (grobes Sieben) durch die Daten und wegkicken
     ################################################
@@ -202,16 +232,15 @@ if __name__ == "__main__":
     ################################################
     # Prognose und wegkicken
     ################################################
+    progmin, progmax = 3e-6, 1e3
 
     ################################################
     # Untersuchen des Signals und Fenstern
     ################################################
-    progmin, progmax = 3e-6, 1e3
-
     window, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
+    duration = 2
     timew = np.arange(0, duration - step, window)
     if do_test_mode:
-
         ################################################
         # Erste for schleife um die Grundgesamtheit GG zu sammeln und zu lesen
         ################################################
@@ -225,7 +254,8 @@ if __name__ == "__main__":
             ################################################
             # Berechnung der Gesamtenergie und anschließendes Kicken. Eventuell kann man vorher downsamplen?
             ################################################
-            nrg = np.sum(signal ** 2, axis=1)
+            signal_vector = np.asarray(signal)
+            nrg = np.sum(signal_vector ** 2, axis=0)
             if nrg <= progmin and nrg > progmax:
                 pass  # hier kann der prognose bereich schonmal kommen :)
             else:
@@ -238,35 +268,13 @@ if __name__ == "__main__":
             ################################################
             # Frame Analyse / Rolling Window
             ################################################
-            number_of_samples = len(signal)  # total number of samples
-            current_position = 0
-            count_fr = 0
-            num_fft = int(window / 2)
-            features = []
-            window = int(window)
-            step = int(step)
-            ################################################
-            # Habe hier mein eigenes Rolling Window nur für die Energie geschrieben.
-            # Dann werden auch keine 67 andere Feature geschrieben, sondern nur die relevanten
-            ################################################
-            while current_position + window - 1 < number_of_samples:
-                count_fr += 1
-                # get current window
-                x = signal[current_position:current_position + window]
-                # update window position
-                current_position = current_position + step
-                # keep previous fft mag (used in spectral flux)
-                feature_vector = np.zeros((3, 1))
-                # short-term energy
-                feature_vector[0] = energy(x)
-                features.append(feature_vector)
-
-            nrg_frame = features[0]
-            signals.append(signal)
+            feat = extract_params(signal_vector,window,step)
+            signals.append(signal_vector)
             ################################################
             # Finde den Tick..
             ################################################
-            olds, tmps, news = cut_signal(nrg_frame, signal)
+            olds, tmps, news = cut_signal(feat[0], signal_vector)
+
 
         asarr = np.asarray(signals)
         nrg = np.sum(asarr ** 2, axis=1)
