@@ -165,9 +165,12 @@ def get_energies(d, wavfiles):
         # Berechnung
         signal_2 = data ** 2
         energie[idx] = signal_2.sum()
-        if idx % int(number_of_files / 10) == 0:
-            print(str(idx) + " von " + str(number_of_files))
-
+        try:
+            if idx % int(number_of_files / 10) == 0:
+                print(str(idx) + " von " + str(number_of_files))
+        except:
+            print(idx)
+            pass
     df = pandas.DataFrame(data=energie, index=file_list, columns={'GesamtEnergie'})
     return df
 
@@ -252,7 +255,7 @@ if __name__ == "__main__":
     do_plot = False  # Plotten der Graphen zum Debuggen
     do_test_mode = False  # Diverse Beschleuniger
     do_play = False  # außer Betrieb
-    on_ms_surface = False
+    on_ms_surface = True
 
     plt.clf()
     ################################################
@@ -296,12 +299,13 @@ if __name__ == "__main__":
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
     csvlength = 300  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
-
+    wavfiles = np.random.choice(wavfiles,5)
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
     ################################################
     # gesamtenergie hat einen Median und anhand dessen kann ich doch auch bereits Ausreisser erkennen?
-    if do_test_mode:
+    #TODO aufpassen mit dem test mode :)
+    if not do_test_mode:
         gesamtenergien = get_energies(audio_dir, wavfiles)
     else:
         gesamtenergien = pandas.read_csv('gesamtdaten_energien.csv', index_col=(0))
@@ -340,7 +344,7 @@ if __name__ == "__main__":
     #pwr = pwr.copy()
 
     idx = 0
-    while idx < 2:
+    while idx < 1:
         pwr = pwr.dropna()
         # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
         if idx < 1:
@@ -370,7 +374,7 @@ if __name__ == "__main__":
     win, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
     if not do_test_mode:
         for audiofile, row in wfdf.iterrows():
-            # audiofile =  audiofile.lstrip()
+            audiofile =  audiofile.lstrip()
             anzahl_bearbeitet += 1
             anzahlnochnicht -= 1
             iteration_over_file = 0
@@ -497,6 +501,11 @@ if __name__ == "__main__":
             outn = 'io_hand' + outn
             output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
             r.to_csv(output, index=True)
+        except FileNotFoundError:
+            os.mkdir(os.path.join(audio_dir, "csv"))
+            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+            r.to_csv(output, index=True)
+
         r = pd.DataFrame()
         tickSignal_liste, tick_folge, zeilennamen = [], [], []
 
