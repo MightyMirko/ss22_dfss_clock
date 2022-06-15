@@ -12,6 +12,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from pyAudioAnalysis.ShortTermFeatures import dc_normalize
 from scipy.io import wavfile
 from scipy.stats import t
 
@@ -144,13 +145,19 @@ def extract_params(signal, pwin, pstep):
     :param pstep:
     :return:
     '''
+
+    # signal normalization
+    signal = np.double(signal)
+    signal = signal / (2.0 ** 15)
+
+    signal = dc_normalize(signal)
+
     number_of_samples = len(signal)  # total number of samples
     current_position = 0
     count_fr = 0
-    num_fft = int(pwin / 2)
     features = []
     window = int(pwin)
-    step = int(pstep)
+    pstep = int(pstep)
 
     while current_position + window - 1 < number_of_samples:
         count_fr += 1
@@ -271,7 +278,7 @@ if __name__ == "__main__":
                 ################################################
                 # Frame Analyse / Rolling Window
                 ################################################
-                feat = extract_params(signal,window,step)
+                feat = extract_params(signal,window*fs,step*fs)
                 signals.append(signal)
                 ################################################
                 # Finde den Tick..
