@@ -12,7 +12,6 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from pyAudioAnalysis.ShortTermFeatures import dc_normalize
 from scipy.io import wavfile
 from scipy.stats import t
 
@@ -40,22 +39,19 @@ def getTicks_fromSignal(energy, signal, win=0.05, fs=48000,
     :return:
     """
 
-    d_energy = np.diff(energy) ## TODO alle ticks mit sauberer Stichprobe und dreckiger STichprobe untersuchen
-    indexofpeak = d_energy.argmax()  # Wo ist das Maximum
-    cutback_samples = indexofpeak - samples_before
-    cutfwd_samples =  indexofpeak + samples_after
-
-
-    tt = np.arange(0, len(d_energy), 1)
-    plt.plot(tt,d_energy)
-    #plt.plot(np.arange(0,2*fs/len(d_energy),1),signal)
-    plt.show()
-    plt.close()
+    d_energy = np.diff(energy)  ## TODO alle ticks mit sauberer Stichprobe und dreckiger STichprobe untersuchen
+    indexofpeak = 0
+    # while :
+    indexofpeak = d_energy.argmax()
+    index_im_signalbereich = indexofpeak * fs * window
+    # Wo ist das Maximum
+    cutback_samples = index_im_signalbereich - samples_before
+    cutfwd_samples = index_im_signalbereich + samples_after
 
     if cutback_samples <= 0:
-        raise ValueError
+        raise ValueError('Zu nah am Anfang')
     if cutfwd_samples >= len(signal):
-        raise ValueError
+        raise ValueError('Zu nah am Ende')
 
     olds = signal.copy()
     tmps = signal[cutback_samples:cutfwd_samples]
@@ -151,12 +147,6 @@ def extract_params(signal, pwin, pstep):
     :param pstep:
     :return:
     '''
-
-    # signal normalization
-    signal = np.double(signal)
-    signal = signal / (2.0 ** 15)
-
-    signal = dc_normalize(signal)
 
     number_of_samples = len(signal)  # total number of samples
     current_position = 0
@@ -267,20 +257,28 @@ if __name__ == "__main__":
             audiofile = audiofile.lstrip()
             filepath = os.path.join(audio_dir, audiofile)
             fs, signal = wavfile.read(os.path.join(audio_dir, audiofile))#, mmap=True)
+
             ################################################
             # Berechnung der Gesamtenergie und anschließendes Kicken. Eventuell kann man vorher downsamplen?
             ################################################
             # mmap = np.asarray(signal)
+
             nrg = np.sum(signal ** 2, axis=0)
             if nrg <= progmin and nrg > progmax:
-                pass  # hier kann der prognose bereich schonmal kommen :)
-            else:
-                pass
-
+                errata.append(audiofile)
+                continue  # hier kann der prognose bereich schonmal kommen :)
+            elif nrg > 10:
+                errata.append(audiofile)
+                continue
+            # signal normalization
+            # signal = np.double(signal)
+            # signal = signal / (2.0 ** 15)
+            #
+            # signal = dc_normalize(signal)
             ################################################
             # Downsampling
             ################################################
-            #ydem = decimate(signal, 2)  # keine Vorfilterung notwendig!
+            # ydem = decimate(signal, 2)  # keine Vorfilterung notwendig!
 
             ################################################
             # Extrahiere Tick
@@ -298,11 +296,6 @@ if __name__ == "__main__":
                 try:
                     olds, tmps, news = getTicks_fromSignal(feat, signal)
                 except ValueError:
-                    tt = np.arange(0, 96000, 1)
-                    plt.plot(tt, signal)
-                    plt.title = audiofile
-                    plt.show()
-                    plt.close()
                     break
 
                 signal = news
