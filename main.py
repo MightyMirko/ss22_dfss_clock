@@ -8,14 +8,10 @@
 # db scan
 
 import os
-from datetime import datetime
-from enum import Enum
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas
 import pandas as pd
-from pyAudioAnalysis import ShortTermFeatures as aF
 from scipy.io import wavfile
 from scipy.stats import t
 
@@ -26,26 +22,42 @@ plt.rcParams['figure.dpi'] = 150
 # plt.rcParams['interactive'] = True
 plt.rcParams['figure.figsize'] = (12, 9)
 
-def cut_signal(nrg, s, fs =48000):
-    energy = nrg  # Alle Daten aus der index nummer 1 ziehen..
-    d_energy = f[fn.index('delta energy'), :]
-    dd_energy = np.diff(d_energy)
-    ddd_energy = np.diff(dd_energy)
 
+def cut_signal(energy, signal, win=0.05, fs=48000,
+               davorinms = 0.04,
+               danachinms = 0.1):
+    """
+    TODO: Funktion sollte auf integer umgebaut werden
+
+    Diese Funktion nimmt den Energie Vector der vorher erstellt worden ist, leitet diesen ab und detektiert die
+    Stelle (indexofpeak) wo das Maximum ist (quasi die x = y.max()). Dann wird geschnitten, anhand der Anzahl Samples
+    zurück und vor, in Abhängigkeit der Samplerate
+    :param davorinms: Wie viele Sekunden vor dem Ticken soll geschnitten werden
+    :param danachinms: Wieviel Sekunden danach
+    :param energy: Vector der Energie
+    :param signal: Signal (numpy array)
+    :param win:
+    :param fs: samplerate
+    :return:
+    """
+    d_energy = np.diff(energy)
     indexofpeak = d_energy.argmax()  # Wo ist das Maximum
     peak_in_ms = win * indexofpeak
-    back_in_ms = peak_in_ms - 0.04
-    adv_in_ms = peak_in_ms + 0.1
+
+    back_in_ms = peak_in_ms - davorinms
+    adv_in_ms = peak_in_ms + danachinms
+
     back_in_sample = int(fs * back_in_ms)
     adv_in_sample = int(fs * adv_in_ms)
-    deltasample = adv_in_sample - back_in_sample
 
-    olds = s.copy()
-    tmps = s[back_in_sample:adv_in_sample]
-    news = s.copy()
-    news[back_in_sample:adv_in_sample] = s[back_in_sample:adv_in_sample] * 0
+    olds = signal.copy()
+    tmps = signal[back_in_sample:adv_in_sample]
+    news = signal.copy()
+
+    news[back_in_sample:adv_in_sample] = signal[back_in_sample:adv_in_sample] * 0
 
     return olds, tmps, news
+
 
 def prognose(data, gamma=0.95, bereich='beide'):
     """
@@ -84,44 +96,39 @@ def prognose(data, gamma=0.95, bereich='beide'):
     # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
 
 
-def get_zeigerwinkel(fromdf):
-    '''
+def Klassenzuweisung(sec_wert):
+    ''' Hier wird erstmal der Sekundenwert der Datei uebergeben
+        zur Kompensation des statischen Fehlers werden noch 3 Sekunden
+        dazu addiert
+        Gibt die Kalassenzuweisung und den korrigierten Sekundenwert zur�ck '''
 
-    :param fromdf:
-    :return:
-    '''
-    form = '%Y%m%d_%H_%M_%S'
-    dt_list = []
-    for row_index, row in fromdf.iterrows():
-        # dat = os.path.splitext(row_index)[0]
-        dat = os.path.basename(row_index).lstrip()
-        dat = dat.split(".")[0]
-        date_string = datetime.strptime(dat, form)
-        Zeiger = date_string.second
-        out =''
-        if (Zeiger >= 0) and (Zeiger < 7.5):
-            out = 'oben'
-        elif (Zeiger > 7.5) and (Zeiger < 22.5):
-            out = 'rechts'
-        elif (Zeiger > 22.5) and (Zeiger < 37.5):
-            out = 'unten'
-        elif (Zeiger > 37.5) and (Zeiger < 52.5):
-            out = 'links'
-        elif (Zeiger > 52.5) and (Zeiger < 60):
-            out = 'oben'
-        else:
-            out = 'Fehler!!!'
-        print(out)
-        dt_list.append((date_string, out))
+    # Kompensation des statischen Fehlers
+    sec_wert = sec_wert + 3
+    # �berlauf verhinden
+    sec_wert = sec_wert % 60
+    out = ''
+    if (sec_wert >= 0) and (sec_wert < 7.5):
+        out = 'oben'
+    elif (sec_wert > 7.5) and (sec_wert < 22.5):
+        out = 'rechts'
+    elif (sec_wert > 22.5) and (sec_wert < 37.5):
+        out = 'unten'
+    elif (sec_wert > 37.5) and (sec_wert < 52.5):
+        out = 'links'
+    elif (sec_wert > 52.5) and (sec_wert < 60):
+        out = 'oben'
+    else:
+        out = 'Fehler!!!'
+    return out, sec_wert
 
-    dtdf = pandas.DataFrame(dt_list, index=fromdf.index, columns=['rectime', 'ZeigerWinkel'])
-    return dtdf
 
 def energy(frame):
     """Computes signal energy of frame"""
     out = np.sum(frame ** 2)
     out /= np.float64(len(frame))
-    return  out
+    return out
+
+
 if __name__ == "__main__":
 
     ################################################
@@ -175,7 +182,7 @@ if __name__ == "__main__":
     # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
-    #wavfiles = np.random.choice(wavfiles,5)
+    # wavfiles = np.random.choice(wavfiles,5)
     signals = []
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
@@ -184,8 +191,7 @@ if __name__ == "__main__":
     ################################################
     # Plotte die Grundgesamtheit und dann jedes mal wieder nach dem Sieben mittels prognose
     ################################################
-    #fig, ax = plt.subplots(3, 2, sharex='all')  # , sharey='all')
-
+    # fig, ax = plt.subplots(3, 2, sharex='all')  # , sharey='all')
 
     ################################################
     # Harken (grobes Sieben) durch die Daten und wegkicken
@@ -200,8 +206,10 @@ if __name__ == "__main__":
     ################################################
     # Untersuchen des Signals und Fenstern
     ################################################
-    win, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
-    timew = np.arange(0, duration - step, win)
+    progmin, progmax = 3e-6, 1e3
+
+    window, step = 0.005, 0.005  # Laufendes Fenster, keine Überlappung
+    timew = np.arange(0, duration - step, window)
     if do_test_mode:
 
         ################################################
@@ -211,7 +219,7 @@ if __name__ == "__main__":
             anzahl_bearbeitet += 1
             anzahlnochnicht -= 1
 
-            audiofile =  audiofile.lstrip()
+            audiofile = audiofile.lstrip()
             filepath = os.path.join(audio_dir, audiofile)
             fs, signal = wavfile.read(os.path.join(audio_dir, audiofile), mmap=True)
             ################################################
@@ -219,7 +227,7 @@ if __name__ == "__main__":
             ################################################
             nrg = np.sum(signal ** 2, axis=1)
             if nrg <= progmin and nrg > progmax:
-                pass # hier kann der prognose bereich schonmal kommen :)
+                pass  # hier kann der prognose bereich schonmal kommen :)
             else:
                 pass
 
@@ -227,9 +235,8 @@ if __name__ == "__main__":
             # Downsampling
             ################################################
 
-
             ################################################
-            # Tickanalyse
+            # Frame Analyse / Rolling Window
             ################################################
             number_of_samples = len(signal)  # total number of samples
             current_position = 0
@@ -238,12 +245,14 @@ if __name__ == "__main__":
             features = []
             window = int(window)
             step = int(step)
-
+            ################################################
+            # Habe hier mein eigenes Rolling Window nur für die Energie geschrieben.
+            # Dann werden auch keine 67 andere Feature geschrieben, sondern nur die relevanten
+            ################################################
             while current_position + window - 1 < number_of_samples:
                 count_fr += 1
                 # get current window
                 x = signal[current_position:current_position + window]
-
                 # update window position
                 current_position = current_position + step
                 # keep previous fft mag (used in spectral flux)
@@ -252,30 +261,35 @@ if __name__ == "__main__":
                 feature_vector[0] = energy(x)
                 features.append(feature_vector)
 
-            dnrg_dt = features[0]
-            features[1] = np.diff(dnrg_dt)
-
+            nrg_frame = features[0]
             signals.append(signal)
+            ################################################
+            # Finde den Tick..
+            ################################################
+            olds, tmps, news = cut_signal(nrg_frame, signal)
 
-        ################################################
-        # Zweite Schleife um GG zu verkleinern
-        ################################################
         asarr = np.asarray(signals)
-        nrg = np.sum(asarr**2, axis=1)
-
-        ### Bis hierhin ist neu geschrieben..
-        #TODO: Das hier muss an die richtige Stelle geschoben werden :-)
+        nrg = np.sum(asarr ** 2, axis=1)
+        # TODO: Das hier muss an die richtige Stelle geschoben werden :-)
         # Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen
 
         if do_test_mode:
             plt.close('all')
+            print('Test mode :-) ')
             exit(1)
+        ################################################
+        # Nehme den gefunden Index und schneide signal heraus in tmps
+        ################################################
+        #
+
+        # df = pd.DataFrame({'energie':nrg}, index=wavfiles)
+        # df2 = pd.concat([df,pandas.DataFrame(asarr)])
+        ### Bis hierhin ist neu geschrieben..
 
         kleinereGG = 1
 
         for audiofile in kleinereGG:
             # extract short-term features using non-overlapping windows
-            f, fn = aF.feature_extraction(signal, fs, int(fs * win), int(fs * step), True)
             print(f[fn[0]])
             ################################################
             # Laufe 2x über das Signal. Es stecken meistens 2 Ticks pro File
@@ -284,8 +298,8 @@ if __name__ == "__main__":
             iteration_over_file = 0
             while iteration_over_file < 2:
                 txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
-                                                                                anzahl,
-                                                                                iteration_over_file + 1)
+                                                                                   anzahl,
+                                                                                   iteration_over_file + 1)
                 txt1 = ('Bearbeiten von {}.').format(audiofile)
                 print(txt, '\n', txt1)
                 ################################################
@@ -297,7 +311,6 @@ if __name__ == "__main__":
 
                 time = np.linspace(0., len(signal) / float(fs), len(signal))
                 duration = len(signal) / float(fs)
-
 
                 ################################################
                 # Nehme den gefunden Index und schneide signal heraus in tmps
@@ -322,7 +335,7 @@ if __name__ == "__main__":
                     tickSignal_liste.append(tmps)
                     zeilennamen.append(audiofile)
                 except ValueError:
-                    errata.append((audiofile,tmps, 'Randwert'))
+                    errata.append((audiofile, tmps, 'Randwert'))
                     print('Diese Datei muss näher untersucht werden:\t' + audiofile)
                     # Tatsächlich habe ich die Dateien bereits verworfen gehabt.. aber dann doch wieder eingebaut..
                     # try:
@@ -335,11 +348,11 @@ if __name__ == "__main__":
                 ################################################
                 # TODO: wenn Daten für vollständige CSV nicht mehr langen, dann sollte dies ebenfalls behandelt werden
                 # #if wfdf.loc[audiofile] == wfdf.iloc[-1]:
-               #    print("Ende")
+                #    print("Ende")
 
                 if len(tickSignal_liste) >= csvlength * 2:
-                    outn = str(anzahlnochnicht ) + '-' + str(anzahl_bearbeitet) + "-output.csv"
-                    tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen )
+                    outn = str(anzahlnochnicht) + '-' + str(anzahl_bearbeitet) + "-output.csv"
+                    tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen)
 
                     tsamples_df.head()
                     tfdf = pd.DataFrame(tick_folge, columns=['tickfolge'], index=zeilennamen)
@@ -372,7 +385,6 @@ if __name__ == "__main__":
                 signal = news.copy()
                 iteration_over_file += 1
 
-
                 ################################################
                 # achtung while Schleife ende
                 ################################################
@@ -403,7 +415,6 @@ if __name__ == "__main__":
 
         r = pd.DataFrame()
         tickSignal_liste, tick_folge, zeilennamen = [], [], []
-
 
     plt.close('all')
 
