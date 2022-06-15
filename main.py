@@ -8,6 +8,7 @@
 # db scan
 
 import os
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,8 +46,8 @@ def getTicks_fromSignal(energy, signal, win=0.05, fs=48000,
     indexofpeak = d_energy.argmax()
     index_im_signalbereich = indexofpeak * fs * window
     # Wo ist das Maximum
-    cutback_samples = index_im_signalbereich - samples_before
-    cutfwd_samples = index_im_signalbereich + samples_after
+    cutback_samples = int(index_im_signalbereich - samples_before)
+    cutfwd_samples = int(index_im_signalbereich + samples_after)
 
     if cutback_samples <= 0:
         raise ValueError('Zu nah am Anfang')
@@ -169,9 +170,11 @@ def extract_params(signal, pwin, pstep):
 def check_dir(directory, testmode = True):
     if testmode:
         directory = r'data'
-    elif not os.path.exists(directory):
+        return directory
+    if not os.path.exists(directory):
         raise IOError
-    return directory
+    else:
+        return directory
 
 
 if __name__ == "__main__":
@@ -197,16 +200,17 @@ if __name__ == "__main__":
     ################################################
     # Zuweisung und Überprüfung des Ordners anhand verschiedener Test-Variablen
     ################################################
-    audio_dir = check_dir(r'H:\Messung_BluetoothMikro\Messung 3\Audios', testmode=do_test_mode)
+    audio_dir = check_dir(r'H:\Messung_BluetoothMikro\Messung 3\Audios', testmode=False)
     ################################################
     # Anlegen der Variablen und Wav-Liste
     ################################################
+    form = '%Y%m%d_%H_%M_%S'
     iteration_over_file = 0
     anzahl_bearbeitet = 0
-    wavfiles = []
     csvlength = 300  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
+    wavfiles = []
     signals = []
-    ticks = []
+    sigexp = []
     ################################################
     # Anlegen und holen aller Daten aus der audioDir, dann Desinfizieren der Wavliste
     ################################################
@@ -244,184 +248,140 @@ if __name__ == "__main__":
     duration = 2
     timew = np.arange(0, duration - step, window)
 
-    if do_test_mode:
+    ################################################
+    # Erste for schleife um die Grundgesamtheit GG zu sammeln und zu lesen
+    ################################################
+    i = 0
+    tickanzahl = 2
+    for audiofile in wavfiles:
+        anzahl_bearbeitet += 1
+        anzahlnochnicht -= 1
+
+        # audiofile = audiofile.lstrip()
+        filepath = os.path.join(audio_dir, audiofile)
+        fs, signal = wavfile.read(os.path.join(audio_dir, audiofile))  # , mmap=True)
+
         ################################################
-        # Erste for schleife um die Grundgesamtheit GG zu sammeln und zu lesen
+        # Berechnung der Gesamtenergie und anschließendes Kicken. Eventuell kann man vorher downsamplen?
         ################################################
-        i = 0
-        tickanzahl =2
-        for audiofile in wavfiles:
-            anzahl_bearbeitet += 1
-            anzahlnochnicht -= 1
+        # mmap = np.asarray(signal)
 
-            audiofile = audiofile.lstrip()
-            filepath = os.path.join(audio_dir, audiofile)
-            fs, signal = wavfile.read(os.path.join(audio_dir, audiofile))#, mmap=True)
+        nrg = np.sum(signal ** 2, axis=0)
+        if nrg <= progmin and nrg > progmax:
+            errata.append(audiofile)
+            continue
+        elif nrg > 10:
+            errata.append(audiofile)
+            continue
+        ################################################
+        # Downsampling
+        ################################################
+        # ydem = decimate(signal, 2)  # keine Vorfilterung notwendig!
 
+        ################################################
+        # Extrahiere Tick
+        ################################################
+        i = 1
+        ticks, tick_folge = [], []
+        while i <= tickanzahl:
             ################################################
-            # Berechnung der Gesamtenergie und anschließendes Kicken. Eventuell kann man vorher downsamplen?
+            # Frame Analyse / Rolling Window
             ################################################
-            # mmap = np.asarray(signal)
-
-            nrg = np.sum(signal ** 2, axis=0)
-            if nrg <= progmin and nrg > progmax:
+            feat = extract_params(signal, window * fs, step * fs)
+            signals.append(signal)
+            ################################################
+            # Finde den Tick..
+            ################################################
+            try:
+                olds, tmps, news = getTicks_fromSignal(feat, signal)
+            except ValueError:
+                break
+            ################################################
+            # Validierung des Tick Signals..
+            ################################################
+            if len(tmps) > 6720:
                 errata.append(audiofile)
-                continue  # hier kann der prognose bereich schonmal kommen :)
-            elif nrg > 10:
-                errata.append(audiofile)
-                continue
-            # signal normalization
-            # signal = np.double(signal)
-            # signal = signal / (2.0 ** 15)
-            #
-            # signal = dc_normalize(signal)
-            ################################################
-            # Downsampling
-            ################################################
-            # ydem = decimate(signal, 2)  # keine Vorfilterung notwendig!
-
-            ################################################
-            # Extrahiere Tick
-            ################################################
-            i = 1
-            while i <= tickanzahl:
-                ################################################
-                # Frame Analyse / Rolling Window
-                ################################################
-                feat = extract_params(signal,window*fs,step*fs)
-                signals.append(signal)
-                ################################################
-                # Finde den Tick..
-                ################################################
-                try:
-                    olds, tmps, news = getTicks_fromSignal(feat, signal)
-                except ValueError:
-                    break
-
-                signal = news
-                ticks.append((audiofile,i,tmps))
-                i += 1
-
-
+                tmps = tmps[:6720]
+            tickit = 'tick' + str(i)
+            signal = news
+            ticks.append(tmps)
+            tick_folge.append(tickit)
+            i += 1
+        dat = os.path.basename(audiofile).lstrip().split(".")[0]
+        # dat = dat.split(".")[0]
+        date_string = datetime.strptime(dat, form)
+        sigexp.append({'audiofile': audiofile, 'rectime': date_string, 'tickfolge': tickit, 'signal': ticks})
 
         # TODO: Das hier muss an die richtige Stelle geschoben werden :-)
         # Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen
 
-        if do_test_mode:
-            plt.close('all')
-            print('Test mode :-) ')
-            exit(1)
-        ################################################
-        # Nehme den gefunden Index und schneide signal heraus in tmps
-        ################################################
+    if do_test_mode:
+        plt.close('all')
+        print('Test mode :-) ')
+        exit(1)
         #
+        #   # txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
+        #   #                                                                    anzahl,
+        #   #                                                                    iteration_over_file + 1)
+        #   # txt1 = ('Bearbeiten von {}.').format(audiofile)
+        #   # print(txt, '\n', txt1)
+        #     ################################################
+        #
+        #     # Versuche das geschnittene Signal in die csv zu drücken.. Wenn es nicht, da nicht gleich lang so passt
+        #     # das Programm das geschnittene Signal an und füllt es mit einem konstanten Wert..
+        # #
+        # ################################################
+        # try:
+        #     tick_folge.append(tickit)
+        #     tickSignal_liste.append(tmps)
+        #     zeilennamen.append(audiofile)
+        # except ValueError:
+        #     errata.append((audiofile, tmps, 'Randwert'))
+        #     print('Diese Datei muss näher untersucht werden:\t' + audiofile)
+        #     # Tatsächlich habe ich die Dateien bereits verworfen gehabt.. aber dann doch wieder eingebaut..
+        #     # try:
+        #     #    angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
+        #     #    csv_exp.append(angepasst)
+        #     # except ValueError:
+        #     #    pass
+        # ################################################
+        # # Export der csv datei wenn länger als x
+        # ################################################
+        # # TODO: wenn Daten für vollständige CSV nicht mehr langen, dann sollte dies ebenfalls behandelt werden
+        # # #if wfdf.loc[audiofile] == wfdf.iloc[-1]:
+        # #    print("Ende")
+        #
+        # if len(tickSignal_liste) >= csvlength * 2:
+        #     outn = str(anzahlnochnicht) + '-' + str(anzahl_bearbeitet) + "-output.csv"
+        #     tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen)
+        #
+        #     tsamples_df.head()
+        #     tfdf = pd.DataFrame(tick_folge, columns=['tickfolge'], index=zeilennamen)
+        #     conc = pd.concat([tfdf, tsamples_df], axis=1)
+        #     r = pd.merge(wfdf, conc, left_index=True, right_index=True)
+        #     # r = conc.join(wfdf, how='inner', rsuffix='_other')
+        #     # r = pd.merge(tfdf,tsamples_df, left_index=True, right_index=True, how='outer')
+        #
+        #     r.drop_duplicates(inplace=True)
+        #     # r = pd.DataFrame(tickSignal_liste, index=zeilennamen)
+        #
+        #     if r.isnull().values.any():
+        #         print('Achtung NaNs')
+        #         r.dropna(inplace=True)
+        #     if not do_test_mode:
+        #         try:
+        #             output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+        #             r.to_csv(output, index=True)
+        #         except PermissionError:
+        #             outn = 'io_hand' + outn
+        #             output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
+        #             r.to_csv(output, index=True)
+        #         r = pd.DataFrame()
+        #         tickSignal_liste, tick_folge, zeilennamen = [], [], []
 
-        # df = pd.DataFrame({'energie':nrg}, index=wavfiles)
-        # df2 = pd.concat([df,pandas.DataFrame(asarr)])
-        ### Bis hierhin ist neu geschrieben..
-
-        kleinereGG = 1
-
-        for audiofile in kleinereGG:
-            # extract short-term features using non-overlapping windows
-            print(f[fn[0]])
-            ################################################
-            # Laufe 2x über das Signal. Es stecken meistens 2 Ticks pro File
-            ################################################
-
-            iteration_over_file = 0
-            while iteration_over_file < 2:
-                txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
-                                                                                   anzahl,
-                                                                                   iteration_over_file + 1)
-                txt1 = ('Bearbeiten von {}.').format(audiofile)
-                print(txt, '\n', txt1)
-                ################################################
-                # Rolling Window
-                ################################################
-                ###############
-                # Anlegen der Variablen
-                ###############
-
-                time = np.linspace(0., len(signal) / float(fs), len(signal))
-                duration = len(signal) / float(fs)
-
-                ################################################
-                # Nehme den gefunden Index und schneide signal heraus in tmps
-                ################################################
-                olds, tmps, news = getTicks_fromSignal(f, fn, signal)
-                ################################################
-                # Validierung des Tick Signals..
-                ################################################
-
-                if len(tmps) > 6720:
-                    tmps = tmps[:6720]
-
-                # zeile = audiofile.strip(audio_dir).strip('.wav') + 'tick' + str(iteration_over_file)
-                tickit = 'tick' + str(iteration_over_file)
-                ################################################
-                # Versuche das geschnittene Signal in die csv zu drücken.. Wenn es nicht, da nicht gleich lang so passt
-                # das Programm das geschnittene Signal an und füllt es mit einem konstanten Wert..
-                #
-                ################################################
-                try:
-                    tick_folge.append(tickit)
-                    tickSignal_liste.append(tmps)
-                    zeilennamen.append(audiofile)
-                except ValueError:
-                    errata.append((audiofile, tmps, 'Randwert'))
-                    print('Diese Datei muss näher untersucht werden:\t' + audiofile)
-                    # Tatsächlich habe ich die Dateien bereits verworfen gehabt.. aber dann doch wieder eingebaut..
-                    # try:
-                    #    angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
-                    #    csv_exp.append(angepasst)
-                    # except ValueError:
-                    #    pass
-                ################################################
-                # Export der csv datei wenn länger als x
-                ################################################
-                # TODO: wenn Daten für vollständige CSV nicht mehr langen, dann sollte dies ebenfalls behandelt werden
-                # #if wfdf.loc[audiofile] == wfdf.iloc[-1]:
-                #    print("Ende")
-
-                if len(tickSignal_liste) >= csvlength * 2:
-                    outn = str(anzahlnochnicht) + '-' + str(anzahl_bearbeitet) + "-output.csv"
-                    tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen)
-
-                    tsamples_df.head()
-                    tfdf = pd.DataFrame(tick_folge, columns=['tickfolge'], index=zeilennamen)
-                    conc = pd.concat([tfdf, tsamples_df], axis=1)
-                    r = pd.merge(wfdf, conc, left_index=True, right_index=True)
-                    # r = conc.join(wfdf, how='inner', rsuffix='_other')
-                    # r = pd.merge(tfdf,tsamples_df, left_index=True, right_index=True, how='outer')
-
-                    r.drop_duplicates(inplace=True)
-                    # r = pd.DataFrame(tickSignal_liste, index=zeilennamen)
-
-                    if r.isnull().values.any():
-                        print('Achtung NaNs')
-                        r.dropna(inplace=True)
-                    if not do_test_mode:
-                        try:
-                            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                            r.to_csv(output, index=True)
-                        except PermissionError:
-                            outn = 'io_hand' + outn
-                            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-                            r.to_csv(output, index=True)
-                        r = pd.DataFrame()
-                        tickSignal_liste, tick_folge, zeilennamen = [], [], []
-
-                ################################################
-                # Setzen vor Rekursion Ende
-                ################################################
-
-                signal = news.copy()
-                iteration_over_file += 1
-
-                ################################################
-                # achtung while Schleife ende
-                ################################################
+        ################################################
+        # achtung while Schleife ende
+        ################################################
 
     outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
     tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen)
