@@ -301,12 +301,13 @@ if __name__ == "__main__":
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
     ################################################
     # gesamtenergie hat einen Median und anhand dessen kann ich doch auch bereits Ausreisser erkennen?
-    if not do_test_mode:
+    if do_test_mode:
         gesamtenergien = get_energies(audio_dir, wavfiles)
     else:
         gesamtenergien = pandas.read_csv('gesamtdaten_energien.csv', index_col=(0))
 
-    pwr = gesamtenergien.drop_duplicates()
+    pwr = gesamtenergien.copy()
+    pwr.drop_duplicates(inplace=True)
     sauber_index = pwr.index.str.lstrip()
     pwr.set_index(sauber_index)
 
@@ -339,7 +340,7 @@ if __name__ == "__main__":
     #pwr = pwr.copy()
 
     idx = 0
-    while idx < 1:
+    while idx < 2:
         pwr = pwr.dropna()
         # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
         if idx < 1:
@@ -453,6 +454,7 @@ if __name__ == "__main__":
 
                     if r.isnull().values.any():
                         print('Achtung NaNs')
+                        r.dropna(inplace=True)
                     if not do_test_mode:
                         try:
                             output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
