@@ -117,7 +117,11 @@ def get_zeigerwinkel(fromdf):
     dtdf = pandas.DataFrame(dt_list, index=fromdf.index, columns=['rectime', 'ZeigerWinkel'])
     return dtdf
 
-
+def energy(frame):
+    """Computes signal energy of frame"""
+    out = np.sum(frame ** 2)
+    out /= np.float64(len(frame))
+    return  out
 if __name__ == "__main__":
 
     ################################################
@@ -210,6 +214,47 @@ if __name__ == "__main__":
             audiofile =  audiofile.lstrip()
             filepath = os.path.join(audio_dir, audiofile)
             fs, signal = wavfile.read(os.path.join(audio_dir, audiofile), mmap=True)
+            ################################################
+            # Berechnung der Gesamtenergie und anschließendes Kicken. Eventuell kann man vorher downsamplen?
+            ################################################
+            nrg = np.sum(signal ** 2, axis=1)
+            if nrg <= progmin and nrg > progmax:
+                pass # hier kann der prognose bereich schonmal kommen :)
+            else:
+                pass
+
+            ################################################
+            # Downsampling
+            ################################################
+
+
+            ################################################
+            # Tickanalyse
+            ################################################
+            number_of_samples = len(signal)  # total number of samples
+            current_position = 0
+            count_fr = 0
+            num_fft = int(window / 2)
+            features = []
+            window = int(window)
+            step = int(step)
+
+            while current_position + window - 1 < number_of_samples:
+                count_fr += 1
+                # get current window
+                x = signal[current_position:current_position + window]
+
+                # update window position
+                current_position = current_position + step
+                # keep previous fft mag (used in spectral flux)
+                feature_vector = np.zeros((3, 1))
+                # short-term energy
+                feature_vector[0] = energy(x)
+                features.append(feature_vector)
+
+            dnrg_dt = features[0]
+            features[1] = np.diff(dnrg_dt)
+
             signals.append(signal)
 
         ################################################
