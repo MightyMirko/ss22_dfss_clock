@@ -302,68 +302,22 @@ if __name__ == "__main__":
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
     ################################################
-    # gesamtenergie hat einen Median und anhand dessen kann ich doch auch bereits Ausreisser erkennen?
-    #TODO aufpassen mit dem test mode :)
-    if not do_test_mode:
-        gesamtenergien = get_energies(audio_dir, wavfiles)
-    else:
-        gesamtenergien = pandas.read_csv('gesamtdaten_energien.csv', index_col=(0))
-
-    pwr = gesamtenergien.copy()
-    pwr.drop_duplicates(inplace=True)
-    sauber_index = pwr.index.str.lstrip()
-    pwr.set_index(sauber_index)
 
     ################################################
     # Plotte die Grundgesamtheit und dann jedes mal wieder nach dem Sieben mittels prognose
     ################################################
     #fig, ax = plt.subplots(3, 2, sharex='all')  # , sharey='all')
-    #############################################
-    # entweder über Quantile oder harter Schwellenwert..
-    qu = pwr['GesamtEnergie'].quantile(0.1)
-    qo = pwr['GesamtEnergie'].quantile(0.999)
-    v=pwr.shape[0]
-    minimalschwellle = 0.3  # eigentlich lieber mit der fft für frequenzen kleiner 300 Hz
-    maximalschwelle = 100
 
-    for x in pwr.index:
-        nrg = pwr.loc[x][0]
-        if nrg > minimalschwellle and nrg < maximalschwelle:  # or pwr.loc[x] < progmin:
-            pass
-        else:
-            pwr.drop(x, inplace=True)
 
-    rausgeworfen = v - pwr.shape[0]
-
-    if rausgeworfen == 0:
-        print('Keine ausgesiebt')
-    else :
-        print('{} Audiofiles rausgeworfen'.format(rausgeworfen))
-
-    idx = 0
-    while idx < 1:
-        pwr = pwr.dropna()
-
-        if idx < 1:
-            progmax = prognose(pwr.to_numpy(), gamma=0.997, bereich='rechts')
-        else:
-            progmax = prognose(pwr.to_numpy(), gamma=0.95, bereich ='rechts')
-
-        # siebe nun anhand der prognostizierten Schwellenwerte.
-        for x in pwr.index:
-            nrg = pwr.loc[x][0]
-            if nrg > progmax:
-                pwr.drop(x, inplace=True)
-        idx += 1
-        print(pwr.shape[0])
-
-    # sieb_energien.to_csv('sieb.csv', index=True)
-    print(pwr.head())
-    wfdf = pwr.copy()
-    print(wfdf.head(n=1))
-    wfdf = wfdf.join(get_zeigerwinkel(wfdf))
-    print(wfdf.head())
-    wfdf.head()
+    ################################################
+    # Harken (grobes Sieben) durch die Daten und wegkicken
+    ################################################
+    ################################################
+    # boxcox
+    ################################################
+    ################################################
+    # Prognose und wegkicken
+    ################################################
 
     ################################################
     # Untersuchen des Signals und Fenstern
