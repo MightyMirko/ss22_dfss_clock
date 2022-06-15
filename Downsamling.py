@@ -34,6 +34,7 @@ freq = 3
 sample_rate = 100
 q = 2
 ''' ------------------------------------ '''
+
 # Testumgebung blabla
 samples = wave_duration*sample_rate
 samples_decimated = int(samples/q)
@@ -41,8 +42,9 @@ x = np.linspace(0, wave_duration, samples, endpoint=False)
 y = np.cos(x*np.pi*freq*2)
 xnew = np.linspace(0, wave_duration, samples_decimated, endpoint=False)
 
+
 ''' Entscheidende Funktion '''
-ydem = decimate(y, q)
+ydem = decimate(y, q)  # keine Vorfilterung notwendig!
 
 
 # plot zu Kontrolle
