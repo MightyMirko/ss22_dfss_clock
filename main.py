@@ -1,24 +1,38 @@
-# @Author Mirko Matosin und Alexander WÃ¼nstel
-# @Date 14.02.2022
-#
+"""
+@Author Mirko Matosin & Alexander Wunstel
+@Date 14.02.2022
+"""
 
-
-# fft anschauen. clustern, standardisieren, normalisieren
-# isolation forest
-# db scan
-
+# Bibliotheken
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 import os
+
+from scipy.io import wavfile
+#from scipy import signal as sig
+from scipy.signal import butter
+from scipy.signal import sosfilt
+from scipy.signal import hilbert
+from scipy.signal import windows
+from scipy.signal import medfilt
+from scipy.fft import fft, fftfreq
+from scipy.stats import norm, t, chi2, f, weibull_min, gamma
+
+from scipy.stats import boxcox
+from scipy.special import inv_boxcox
+from scipy.signal import decimate
+
 from datetime import datetime
 from enum import Enum
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas
-import pandas as pd
+# spezielle Bibliotheken
 from pyAudioAnalysis import ShortTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO as aIO
-from scipy.io import wavfile
-from scipy.stats import t
+
+
+
+
 
 ###################
 # Anlegen globaler Var
@@ -28,7 +42,14 @@ plt.rcParams['figure.dpi'] = 150
 plt.rcParams['figure.figsize'] = (12, 9)
 
 
-class ZeigerWinkel(Enum):
+
+
+
+
+
+''' Funktionen '''
+
+class ZeigerWinkel(Enum): # nicht erforderlich 
     """
     """
     OBEN = np.append(np.linspace(0, 7, 8, dtype=int),
@@ -38,7 +59,7 @@ class ZeigerWinkel(Enum):
     LINKS = np.linspace(38, 52, 15, dtype=int).tolist()
 
 
-
+# nur für Test Mode
 def plotsounds(ax, data, abszisse, param_dict=None, filename='N/A', samplerate=48000, log=True,
                xlab='Time [signal]', ylab='Amplitude', title='Ticken im Original'):
     """
@@ -72,7 +93,7 @@ def plotsounds(ax, data, abszisse, param_dict=None, filename='N/A', samplerate=4
     ax.set_title(title)
     return out
 
-
+# wofür ist das?
 def chroma_plot(featvec, names):
     fig300, scat = plt.subplots(12, 1)
     x = 21
@@ -84,7 +105,7 @@ def chroma_plot(featvec, names):
     plt.close()
     return
 
-
+# nur Test Mode
 def fn_plot(featvec, names, s):
     fig300, scat = plt.subplots(8, 1)
     x = 0
@@ -96,7 +117,7 @@ def fn_plot(featvec, names, s):
     fig300.tight_layout()
     return fig300, scat
 
-
+# nur Test Mode
 def plot_energy(f, fn, filename):
     energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
     d_energy = f[fn.index('delta energy'), :]
@@ -118,6 +139,7 @@ def plot_energy(f, fn, filename):
         i.grid()
     fig1.show()
 
+''' Wichtig optimieren!!! '''
 def cut_signal(f, fn, s, fs =48000):
     energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
     d_energy = f[fn.index('delta energy'), :]
@@ -139,11 +161,36 @@ def cut_signal(f, fn, s, fs =48000):
 
     return olds, tmps, news
 
+def calc_energie(signal):
+    ''' für einzelen Signale
+        Berechnet die Energie für ein komplettes Signal unabhängig ob
+        Dataframe oder Array (Array ist effizienter)
+        und gibt einen einzelnen Wert zurück'''
+    return np.sum(signal**2)
 
+'''
+def calc_energie_df(df):
+     Berechnet die Energie für einen kompletten Datensatz (dataframe)
+        Datensatz darf nur aus Signalen bestehen! keine Dateinamen
+        Benutze die loc Methode oder den [] Operator um einen
+        reduzierten Datensatz zu übergeben
+        return df.sum(axis=1)
+        '''
+        
+def calc_energie_np(data):
+    ''' Für numpy Matrizen
+        Berechnet die Energie für einen kompletten Datensatz
+        Datensatz darf nur aus Signalen bestehen! keine Dateinamen ''' 
+    #return np.sum(np.square(data), axis=1)
+    # oder
+    return np.sum(data**2, axis=1)
+    
+
+# in Zukunft überflüssig - Schleife wandert in die Main
 def get_energies(d, wavfiles):
     """
     Diese Funktion bestimmt die Schwellenwerte aller Signale und erstellt ein Dataframe
-
+    Nein!!! Die Energie!!! Keine Schwellwerte
     :param d: wo soll der suchen
     :param wavfiles: Ã¼bergabe der zu siebenden Daten
     :return:
@@ -170,10 +217,10 @@ def get_energies(d, wavfiles):
         except:
             print(idx)
             pass
-    df = pandas.DataFrame(data=energie, index=file_list, columns={'GesamtEnergie'})
+    df = pd.DataFrame(data=energie, index=file_list, columns={'GesamtEnergie'})
     return df
 
-
+# weg damit Prognosewerte werden aus der Analyse ermittelt und hart gecoded
 def prognose(data, gamma=0.95, bereich='beide'):
     """
     Berechnung des Prognosebereichs
@@ -210,7 +257,35 @@ def prognose(data, gamma=0.95, bereich='beide'):
         return 0
     # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
 
+def Klassenzuweisung(sec_wert):
+    ''' Hier wird erstmal der Sekundenwert der Datei übergeben
+        zur Kompensation des statischen Fehlers werden noch 3 Sekunden
+        dazu addiert
+        Gibt die Kalassenzuweisung und den korrigierten Sekundenwert zurück '''
+        
+    # Kompensation des statischen Fehlers
+    sec_wert = sec_wert + 3
+    # Überlauf verhinden
+    sec_wert = sec_wert % 60
+    out = ''
+    if (sec_wert >= 0) and (sec_wert < 7.5):
+        out = 'oben'
+    elif (sec_wert > 7.5) and (sec_wert < 22.5):
+        out = 'rechts'
+    elif (sec_wert > 22.5) and (sec_wert < 37.5):
+        out = 'unten'
+    elif (sec_wert > 37.5) and (sec_wert < 52.5):
+        out = 'links'
+    elif (sec_wert > 52.5) and (sec_wert < 60):
+        out = 'oben'
+    else:
+        out = 'Fehler!!!'
+    return out, sec_wert
 
+
+
+
+# völlig überdimensioniert - Schleife wandert auch in die Main 
 def get_zeigerwinkel(fromdf):
     '''
 
@@ -241,7 +316,7 @@ def get_zeigerwinkel(fromdf):
         print(out)
         dt_list.append((date_string, out))
 
-    dtdf = pandas.DataFrame(dt_list, index=fromdf.index, columns=['rectime', 'ZeigerWinkel'])
+    dtdf = pd.DataFrame(dt_list, index=fromdf.index, columns=['rectime', 'ZeigerWinkel'])
     return dtdf
 
 
@@ -307,7 +382,7 @@ if __name__ == "__main__":
     if not do_test_mode:
         gesamtenergien = get_energies(audio_dir, wavfiles)
     else:
-        gesamtenergien = pandas.read_csv('gesamtdaten_energien.csv', index_col=(0))
+        gesamtenergien = pd.read_csv('gesamtdaten_energien.csv', index_col=(0))
 
     pwr = gesamtenergien.copy()
     pwr.drop_duplicates(inplace=True)
