@@ -163,8 +163,7 @@ def get_energies(d, wavfiles):
         fn = file_list[idx]
         samplerate, data = wavfile.read(d + ('\\') + file_list[idx], mmap=True)
         # Berechnung
-        signal_2 = data ** 2
-        energie[idx] = signal_2.sum()
+        energie[idx] = sum(data ** 2)
         try:
             if idx % int(number_of_files / 10) == 0:
                 print(str(idx) + " von " + str(number_of_files))
