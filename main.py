@@ -24,12 +24,10 @@ plt.rcParams['figure.dpi'] = 150
 plt.rcParams['figure.figsize'] = (12, 9)
 
 
-def cut_signal(energy, signal, win=0.05, fs=48000,
-               davor_insek=0.04,
-               danach_insek=0.1):
+def getTicks_fromSignal(energy, signal, win=0.05, fs=48000,
+                        samples_before=1920,
+                        samples_after=4800):
     """
-    TODO: Funktion sollte auf integer umgebaut werden
-
     Diese Funktion nimmt den Energie Vector der vorher erstellt worden ist, leitet diesen ab und detektiert die
     Stelle (indexofpeak) wo das Maximum ist (quasi die x = y.max()). Dann wird geschnitten, anhand der Anzahl Samples
     zurück und vor, in Abhängigkeit der Samplerate
@@ -41,21 +39,22 @@ def cut_signal(energy, signal, win=0.05, fs=48000,
     :param fs: samplerate
     :return:
     """
+
     d_energy = np.diff(energy)
     indexofpeak = d_energy.argmax()  # Wo ist das Maximum
-    peak_in_ms = win * indexofpeak
+    cutback_samples = indexofpeak - samples_before
+    cutfwd_samples =  indexofpeak + samples_after
 
-    back_in_ms = peak_in_ms - davor_insek
-    adv_in_ms = peak_in_ms + danach_insek
-
-    back_in_sample = int(fs * back_in_ms)
-    adv_in_sample = int(fs * adv_in_ms)
+    if cutback_samples <= 0:
+        raise ValueError
+    if cutfwd_samples >= len(signal):
+        raise ValueError
 
     olds = signal.copy()
-    tmps = signal[back_in_sample:adv_in_sample]
+    tmps = signal[cutback_samples:cutfwd_samples]
     news = signal.copy()
 
-    news[back_in_sample:adv_in_sample] = signal[back_in_sample:adv_in_sample] * 0
+    news[cutback_samples:cutfwd_samples] = signal[cutback_samples:cutfwd_samples] * 0
 
     return olds, tmps, news
 
@@ -274,12 +273,13 @@ if __name__ == "__main__":
             ################################################
             # Downsampling
             ################################################
+            #ydem = decimate(signal, 2)  # keine Vorfilterung notwendig!
 
             ################################################
             # Extrahiere Tick
             ################################################
             i = 1
-            while i < tickanzahl:
+            while i <= tickanzahl:
                 ################################################
                 # Frame Analyse / Rolling Window
                 ################################################
@@ -288,9 +288,9 @@ if __name__ == "__main__":
                 ################################################
                 # Finde den Tick..
                 ################################################
-                olds, tmps, news = cut_signal(feat, signal)
+                olds, tmps, news = getTicks_fromSignal(feat, signal)
                 signal = news
-                ticks.append((i, audiofile,tmps))
+                ticks.append((audiofile,i,tmps))
                 i += 1
 
 
@@ -340,7 +340,7 @@ if __name__ == "__main__":
                 ################################################
                 # Nehme den gefunden Index und schneide signal heraus in tmps
                 ################################################
-                olds, tmps, news = cut_signal(f, fn, signal)
+                olds, tmps, news = getTicks_fromSignal(f, fn, signal)
                 ################################################
                 # Validierung des Tick Signals..
                 ################################################
