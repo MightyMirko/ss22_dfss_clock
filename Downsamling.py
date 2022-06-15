@@ -44,7 +44,7 @@ xnew = np.linspace(0, wave_duration, samples_decimated, endpoint=False)
 
 
 ''' Entscheidende Funktion '''
-ydem = decimate(y, q)  # keine Vorfilterung notwendig!
+ydem = decimate(y, q)       # keine Vorfilterung notwendig!
 
 
 # plot zu Kontrolle
