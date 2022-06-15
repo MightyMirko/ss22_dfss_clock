@@ -118,6 +118,7 @@ def plot_energy(f, fn, filename):
         i.grid()
     fig1.show()
 
+
 def cut_signal(f, fn, s, fs =48000):
     energy = f[fn.index('energy'), :]  # Alle Daten aus der index nummer 1 ziehen..
     d_energy = f[fn.index('delta energy'), :]
@@ -284,6 +285,7 @@ if __name__ == "__main__":
     iteration_over_file = 0
     anzahl_bearbeitet = 0
     wavfiles = []
+    csvlength = 300  # Achtung es werden die Zeilen 2x gezählt -> 50 dateien = 100 zeilen
 
     ################################################
     # Anlegen und holen aller Daten aus der audioDir, dann Desinfizieren der Wavliste
@@ -315,7 +317,7 @@ if __name__ == "__main__":
     ################################################
     # Plotte die Grundgesamtheit und dann jedes mal wieder nach dem Sieben mittels prognose
     ################################################
-    fig, ax = plt.subplots(3, 2, sharex='all')  # , sharey='all')
+    #fig, ax = plt.subplots(3, 2, sharex='all')  # , sharey='all')
     #############################################
     # entweder über Quantile oder harter Schwellenwert..
     qu = pwr['GesamtEnergie'].quantile(0.1)
@@ -338,12 +340,10 @@ if __name__ == "__main__":
     else :
         print('{} Audiofiles rausgeworfen'.format(rausgeworfen))
 
-    #pwr = pwr.copy()
-
     idx = 0
     while idx < 1:
         pwr = pwr.dropna()
-        # Die Prognose darf nicht mit allen Daten gespeist werden, es muss eine !gute! Stichprobe sein
+
         if idx < 1:
             progmax = prognose(pwr.to_numpy(), gamma=0.997, bereich='rechts')
         else:
