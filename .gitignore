@@ -135,3 +135,6 @@ dmypy.json
 /.idea/ss22_dfss_clock.iml
 /.idea/vcs.xml
 /.idea/.gitignore
+/~$stichprobe.xlsx
+.idea/codeStyles/codeStyleConfig.xml
+.idea/inspectionProfiles/Project_Default.xml
