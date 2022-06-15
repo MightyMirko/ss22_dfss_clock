@@ -47,41 +47,6 @@ def cut_signal(nrg, s, fs =48000):
 
     return olds, tmps, news
 
-
-def get_energies(d, wavfiles):
-    """
-    Diese Funktion bestimmt die Schwellenwerte aller Signale und erstellt ein Dataframe
-
-    :param d: wo soll der suchen
-    :param wavfiles: übergabe der zu siebenden Daten
-    :return:
-    """
-    # try:
-    #     file_list = wavfiles[100:9000]
-    # except:
-    file_list = wavfiles
-
-    number_of_files = len(file_list)
-    print(number_of_files)
-    energie = np.zeros(number_of_files)
-
-    # Energie bestimmen absolut
-    for idx in range(len(file_list)):
-        # einlesen
-        fn = file_list[idx]
-        samplerate, data = wavfile.read(d + ('\\') + file_list[idx], mmap=True)
-        # Berechnung
-        energie[idx] = sum(data ** 2)
-        try:
-            if idx % int(number_of_files / 10) == 0:
-                print(str(idx) + " von " + str(number_of_files))
-        except:
-            print(idx)
-            pass
-    df = pandas.DataFrame(data=energie, index=file_list, columns={'GesamtEnergie'})
-    return df
-
-
 def prognose(data, gamma=0.95, bereich='beide'):
     """
     Berechnung des Prognosebereichs
