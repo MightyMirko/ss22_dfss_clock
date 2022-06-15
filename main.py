@@ -265,11 +265,11 @@ if __name__ == "__main__":
     tick_folge = []
     zeilennamen = []
     errata = []
-    audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
 
     ################################################
-    # Überprüfung
+    # Zuweisung und Überprüfung des Ordners anhand verschiedener Test-Variablen
     ################################################
+    audio_dir = r'H:\Messung_BluetoothMikro\Messung 3\Audios'
     if do_test_mode or on_ms_surface:
         audio_dir = r'data'
     else:
