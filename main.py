@@ -24,6 +24,64 @@ plt.rcParams['figure.dpi'] = 150
 plt.rcParams['figure.figsize'] = (12, 9)
 
 
+class CTick:
+    '''
+
+    '''
+
+    # [vars(c) for c in tick_vector]
+    def as_dict(self):
+        return {'filename': self.filename, 'rectime': self.rectime, 'Zeigerwinkel': self.sektor,
+                'tickfolge': self.tickfolge}
+
+    def get_tick(self):
+        return pd.Series(self.ticksignal)
+
+    def __init__(self, filename, ticksignal, whichtick):
+        self.filename = filename
+        dat = os.path.basename(filename).lstrip().split(".")[0]
+        # dat = dat.split(".")[0]
+        self.rectime = datetime.strptime(dat, form)
+        self.sektor = Klassenzuweisung(self.rectime.second)
+        self.tickfolge = whichtick
+        self.ticksignal = ticksignal
+
+    def plotme(self):
+        pass
+
+    def add_tick(self, ):
+        pass
+
+    def create_data(self):
+        pass
+
+
+def Klassenzuweisung(sec_wert):
+    ''' Hier wird erstmal der Sekundenwert der Datei uebergeben
+        zur Kompensation des statischen Fehlers werden noch 3 Sekunden
+        dazu addiert
+        Gibt die Kalassenzuweisung und den korrigierten Sekundenwert zur�ck '''
+
+    # Kompensation des statischen Fehlers
+    sec_wert = sec_wert + 3
+    # �berlauf verhinden
+    sec_wert = sec_wert % 60
+    out = ''
+    if (sec_wert >= 0) and (sec_wert < 7.5):
+        out = 'oben'
+    elif (sec_wert > 7.5) and (sec_wert < 22.5):
+        out = 'rechts'
+    elif (sec_wert > 22.5) and (sec_wert < 37.5):
+        out = 'unten'
+    elif (sec_wert > 37.5) and (sec_wert < 52.5):
+        out = 'links'
+    elif (sec_wert > 52.5) and (sec_wert < 60):
+        out = 'oben'
+    else:
+        out = 'Fehler!!!'
+    return out
+
+
 def getTicks_fromSignal(energy, signal, win=0.05, fs=48000,
                         samples_before=1920,
                         samples_after=4800):
@@ -100,30 +158,6 @@ def prognose(data, gamma=0.95, bereich='beide'):
     # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
 
 
-def Klassenzuweisung(sec_wert):
-    ''' Hier wird erstmal der Sekundenwert der Datei uebergeben
-        zur Kompensation des statischen Fehlers werden noch 3 Sekunden
-        dazu addiert
-        Gibt die Kalassenzuweisung und den korrigierten Sekundenwert zur�ck '''
-
-    # Kompensation des statischen Fehlers
-    sec_wert = sec_wert + 3
-    # �berlauf verhinden
-    sec_wert = sec_wert % 60
-    out = ''
-    if (sec_wert >= 0) and (sec_wert < 7.5):
-        out = 'oben'
-    elif (sec_wert > 7.5) and (sec_wert < 22.5):
-        out = 'rechts'
-    elif (sec_wert > 22.5) and (sec_wert < 37.5):
-        out = 'unten'
-    elif (sec_wert > 37.5) and (sec_wert < 52.5):
-        out = 'links'
-    elif (sec_wert > 52.5) and (sec_wert < 60):
-        out = 'oben'
-    else:
-        out = 'Fehler!!!'
-    return out, sec_wert
 
 
 def energy(frame):
@@ -167,7 +201,7 @@ def extract_params(signal, pwin, pstep):
     return features
 
 
-def check_dir(directory, testmode = True):
+def check_dir(directory, testmode=True):
     if testmode:
         directory = r'data'
         return directory
@@ -177,15 +211,31 @@ def check_dir(directory, testmode = True):
         return directory
 
 
+def speichere_Dataframe(tickv, anzahl, bearbeitet, filepath):
+    df = pd.DataFrame([vars(x) for x in tickv])
+    df3 = pd.DataFrame(df['ticksignal'].tolist())
+    dfsave = pd.concat([df, df3], axis=1)
+    dfsave.drop('ticksignal', axis=1, inplace=True)
+    outn = str(bearbeitet) + '_von_' + str(anzahl) + "-output.csv"
+    try:
+        output = os.path.join(filepath + '\\' + 'csv' + '\\' + outn)
+        dfsave.to_csv(output, index=True)
+    except PermissionError:
+        outn = 'io_hand' + outn
+        output = os.path.join(filepath + '\\' + 'csv' + '\\' + outn)
+        dfsave.to_csv(output, index=True)
+    finally:
+        print(outn)
+        del df, dfsave, df3
+
+
 if __name__ == "__main__":
 
     ################################################
     # Anlegen der Kontrollvariablen
     ################################################
     print('hello World')
-    do_plot = False  # Plotten der Graphen zum Debuggen
-    do_test_mode = True  # Diverse Beschleuniger
-    do_play = False  # außer Betrieb
+    do_test_mode = False  # Diverse Beschleuniger
     on_ms_surface = True
     plt.clf()
 
@@ -253,6 +303,7 @@ if __name__ == "__main__":
     ################################################
     i = 0
     tickanzahl = 2
+    tick_vector = []
     for audiofile in wavfiles:
         anzahl_bearbeitet += 1
         anzahlnochnicht -= 1
@@ -282,13 +333,13 @@ if __name__ == "__main__":
         # Extrahiere Tick
         ################################################
         i = 1
-        ticks, tick_folge = [], []
         while i <= tickanzahl:
             ################################################
             # Frame Analyse / Rolling Window
             ################################################
             feat = extract_params(signal, window * fs, step * fs)
-            signals.append(signal)
+            # signals.append(signal)
+
             ################################################
             # Finde den Tick..
             ################################################
@@ -296,122 +347,43 @@ if __name__ == "__main__":
                 olds, tmps, news = getTicks_fromSignal(feat, signal)
             except ValueError:
                 break
+
             ################################################
             # Validierung des Tick Signals..
             ################################################
             if len(tmps) > 6720:
                 errata.append(audiofile)
                 tmps = tmps[:6720]
+
+            ################################################
+            # Speichern und Klassierung des Tick Signals..
+            ################################################
+
             tickit = 'tick' + str(i)
             signal = news
-            ticks.append(tmps)
-            tick_folge.append(tickit)
+            tick_object = CTick(audiofile, tmps, tickit)
+            tick_vector.append(tick_object)
             i += 1
-        dat = os.path.basename(audiofile).lstrip().split(".")[0]
-        # dat = dat.split(".")[0]
-        date_string = datetime.strptime(dat, form)
-        sigexp.append({'audiofile': audiofile, 'rectime': date_string, 'tickfolge': tickit, 'signal': ticks})
-
-        # TODO: Das hier muss an die richtige Stelle geschoben werden :-)
-        # Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen
-
-    if do_test_mode:
-        plt.close('all')
-        print('Test mode :-) ')
-        exit(1)
-        #
-        #   # txt = ('Dies ist die {}. csvDatei von {} im {}. Durchlauf').format(anzahl_bearbeitet,
-        #   #                                                                    anzahl,
-        #   #                                                                    iteration_over_file + 1)
-        #   # txt1 = ('Bearbeiten von {}.').format(audiofile)
-        #   # print(txt, '\n', txt1)
-        #     ################################################
-        #
-        #     # Versuche das geschnittene Signal in die csv zu drücken.. Wenn es nicht, da nicht gleich lang so passt
-        #     # das Programm das geschnittene Signal an und füllt es mit einem konstanten Wert..
-        # #
-        # ################################################
-        # try:
-        #     tick_folge.append(tickit)
-        #     tickSignal_liste.append(tmps)
-        #     zeilennamen.append(audiofile)
-        # except ValueError:
-        #     errata.append((audiofile, tmps, 'Randwert'))
-        #     print('Diese Datei muss näher untersucht werden:\t' + audiofile)
-        #     # Tatsächlich habe ich die Dateien bereits verworfen gehabt.. aber dann doch wieder eingebaut..
-        #     # try:
-        #     #    angepasst = np.pad(tmps, [csv_exp.shape[0] - tmps.shape[0], 0], 'constant')
-        #     #    csv_exp.append(angepasst)
-        #     # except ValueError:
-        #     #    pass
-        # ################################################
-        # # Export der csv datei wenn länger als x
-        # ################################################
-        # # TODO: wenn Daten für vollständige CSV nicht mehr langen, dann sollte dies ebenfalls behandelt werden
-        # # #if wfdf.loc[audiofile] == wfdf.iloc[-1]:
-        # #    print("Ende")
-        #
-        # if len(tickSignal_liste) >= csvlength * 2:
-        #     outn = str(anzahlnochnicht) + '-' + str(anzahl_bearbeitet) + "-output.csv"
-        #     tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen)
-        #
-        #     tsamples_df.head()
-        #     tfdf = pd.DataFrame(tick_folge, columns=['tickfolge'], index=zeilennamen)
-        #     conc = pd.concat([tfdf, tsamples_df], axis=1)
-        #     r = pd.merge(wfdf, conc, left_index=True, right_index=True)
-        #     # r = conc.join(wfdf, how='inner', rsuffix='_other')
-        #     # r = pd.merge(tfdf,tsamples_df, left_index=True, right_index=True, how='outer')
-        #
-        #     r.drop_duplicates(inplace=True)
-        #     # r = pd.DataFrame(tickSignal_liste, index=zeilennamen)
-        #
-        #     if r.isnull().values.any():
-        #         print('Achtung NaNs')
-        #         r.dropna(inplace=True)
-        #     if not do_test_mode:
-        #         try:
-        #             output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-        #             r.to_csv(output, index=True)
-        #         except PermissionError:
-        #             outn = 'io_hand' + outn
-        #             output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-        #             r.to_csv(output, index=True)
-        #         r = pd.DataFrame()
-        #         tickSignal_liste, tick_folge, zeilennamen = [], [], []
-
         ################################################
         # achtung while Schleife ende
         ################################################
 
-    outn = str(anzahl_bearbeitet - csvlength) + '-' + str(anzahl_bearbeitet) + "-output.csv"
-    tsamples_df = pd.DataFrame(tickSignal_liste, index=zeilennamen)
-    tsamples_df.head()
-    tfdf = pd.DataFrame(tick_folge, columns=['tickfolge'], index=zeilennamen)
-    conc = pd.concat([tfdf, tsamples_df], axis=1)
-    r = pd.merge(wfdf, conc, left_index=True, right_index=True)
-    # r = conc.join(wfdf, how='inner', rsuffix='_other')
-    # r = pd.merge(tfdf,tsamples_df, left_index=True, right_index=True, how='outer')
+        if len(tick_vector) >= csvlength * 2:
+            speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
+            tick_vector = []
+        else:
+            continue
+    speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
+    tick_vector = []
 
-    r.drop_duplicates(inplace=True)
-    # r = pd.DataFrame(tickSignal_liste, index=zeilennamen)
-    if not do_test_mode:
-        try:
-            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-            r.to_csv(output, index=True)
-        except PermissionError:
-            outn = 'io_hand' + outn
-            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-            r.to_csv(output, index=True)
-        except FileNotFoundError:
-            os.mkdir(os.path.join(audio_dir, "csv"))
-            output = os.path.join(audio_dir + '\\' + 'csv' + '\\' + outn)
-            r.to_csv(output, index=True)
-
-        r = pd.DataFrame()
-        tickSignal_liste, tick_folge, zeilennamen = [], [], []
+    # TODO: Das hier muss an die richtige Stelle geschoben werden :-)
+    # Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen
+    if do_test_mode:
+        plt.close('all')
+        print('Test mode :-) ')
+        exit(1)
 
     plt.close('all')
-
     print('bye world')
 
 '''

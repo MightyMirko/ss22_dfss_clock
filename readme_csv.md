@@ -6,10 +6,9 @@
 *Anzahlnochnichtbearbeitet - Anzahlbearbeitet - output.csv*
 
 ### Spalten
-<index>,GesamtEnergie,rectime,ZeigerWinkel,tickfolge,0,1,2,
+<index>,rectime,ZeigerWinkel,tickfolge,0,1,2,
 
 * Voller Dateiname (meistens 2x vorhanden..)
-* Energie der vollen 2 Sekunden
 * dateformat der Aufnahmezeit
 * Zeigerwinkel anhand der Aufnahmesekunde: 
     
