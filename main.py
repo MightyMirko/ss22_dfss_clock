@@ -8,6 +8,7 @@
 # db scan
 
 import os
+import sys  # garbage collector anpassen
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -22,6 +23,25 @@ from scipy.stats import t
 plt.rcParams['figure.dpi'] = 150
 # plt.rcParams['interactive'] = True
 plt.rcParams['figure.figsize'] = (12, 9)
+
+
+def obj_size_fmt(num):
+    if num < 10 ** 3:
+        return "{:.2f}{}".format(num, "B")
+    elif ((num >= 10 ** 3) & (num < 10 ** 6)):
+        return "{:.2f}{}".format(num / (1.024 * 10 ** 3), "KB")
+    elif ((num >= 10 ** 6) & (num < 10 ** 9)):
+        return "{:.2f}{}".format(num / (1.024 * 10 ** 6), "MB")
+    else:
+        return "{:.2f}{}".format(num / (1.024 * 10 ** 9), "GB")
+
+
+def memory_usage():
+    memory_usage_by_variable = pd.DataFrame({k: sys.getsizeof(v) for (k, v) in globals().items()}, index=['Size'])
+    memory_usage_by_variable = memory_usage_by_variable.T
+    memory_usage_by_variable = memory_usage_by_variable.sort_values(by='Size', ascending=False).head(10)
+    memory_usage_by_variable['Size'] = memory_usage_by_variable['Size'].apply(lambda x: obj_size_fmt(x))
+    return memory_usage_by_variable
 
 
 class CTick:
@@ -47,6 +67,23 @@ class CTick:
         self.ticksignal = ticksignal
 
     def plotme(self):
+        '''
+        Kann genutzt werden um das Signal zu plotten. Würde dies gerne mit einer FFT ausbauen.
+        :return:
+        '''
+        fig, axs = plt.subplots(2, 1, figsize=(12, 9))
+        tt = np.arange(0, 6720, 1)
+        axs[0].plot(tt, self.ticksignal, label='Ticksignal')
+        axs[0].legend()
+        axs[0].set_title('Ticken im Signal {}'.format(self.filename))
+        # axs[0].scatter(x=indexofpeak, y=d_energy.max(), label='Max gefunden')
+        # tt = np.arange(0, len(signal), 1)
+        # axs[1].scatter(x=indexofpeak, y=d_energy.max(), label='Max gefunden')
+        # axs[1].plot(tt, signal, label='Energie')
+
+        plt.show()
+        plt.close(fig)
+
         pass
 
     def add_tick(self, ):
@@ -98,7 +135,7 @@ def getTicks_fromSignal(energy, signal, win=0.05, fs=48000,
     :return:
     """
 
-    d_energy = np.diff(energy)  ## TODO alle ticks mit sauberer Stichprobe und dreckiger STichprobe untersuchen
+    d_energy = np.diff(energy)
     indexofpeak = 0
     # while :
     indexofpeak = d_energy.argmax()
@@ -218,12 +255,13 @@ def speichere_Dataframe(tickv, anzahl, bearbeitet, filepath):
     dfsave.drop('ticksignal', axis=1, inplace=True)
     outn = str(bearbeitet) + '_von_' + str(anzahl) + "-output.csv"
     try:
-        output = os.path.join(filepath + '\\' + 'csv' + '\\' + outn)
+        output = os.path.join(filepath + '\\' + 'csv_v2_0' + '\\' + outn)
         dfsave.to_csv(output, index=True)
     except PermissionError:
         outn = 'io_hand' + outn
         output = os.path.join(filepath + '\\' + 'csv' + '\\' + outn)
         dfsave.to_csv(output, index=True)
+
     finally:
         print(outn)
         del df, dfsave, df3
@@ -269,7 +307,7 @@ if __name__ == "__main__":
             if entry.name.endswith('.wav') and entry.is_file():
                 wavfiles.append(entry.name)
 
-    wavfiles = np.asarray(wavfiles)
+    # wavfiles = np.asarray(wavfiles)
     # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
@@ -289,7 +327,7 @@ if __name__ == "__main__":
     ################################################
     # Prognose und wegkicken
     ################################################
-    progmin, progmax = 3e-6, 1e3
+    progmin, progmax = 0.3, 3.12
 
     ################################################
     # Untersuchen des Signals und Fenstern
@@ -369,6 +407,8 @@ if __name__ == "__main__":
         ################################################
 
         if len(tick_vector) >= csvlength * 2:
+            # pick = np.random.choice(tick_vector,1)
+            # [x.plotme() for x in pick]
             speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
             tick_vector = []
         else:
