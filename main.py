@@ -20,6 +20,7 @@ from scipy.stats import t
 ###################
 # Anlegen globaler Var
 ###################
+CSV_V___ = 'csv_v2_0'
 plt.rcParams['figure.dpi'] = 150
 # plt.rcParams['interactive'] = True
 plt.rcParams['figure.figsize'] = (12, 9)
@@ -195,8 +196,6 @@ def prognose(data, gamma=0.95, bereich='beide'):
     # Unbekannter Mittelwert, Unbekannte Varianz - t-Verteilung mit N - 1 FG
 
 
-
-
 def energy(frame):
     """Computes signal energy of frame"""
     out = 0
@@ -254,8 +253,9 @@ def speichere_Dataframe(tickv, anzahl, bearbeitet, filepath):
     dfsave = pd.concat([df, df3], axis=1)
     dfsave.drop('ticksignal', axis=1, inplace=True)
     outn = str(bearbeitet) + '_von_' + str(anzahl) + "-output.csv"
+
     try:
-        output = os.path.join(filepath + '\\' + 'csv_v2_0' + '\\' + outn)
+        output = os.path.join(filepath + '\\' + CSV_V___ + '\\' + outn)
         dfsave.to_csv(output, index=True)
     except PermissionError:
         outn = 'io_hand' + outn
@@ -363,9 +363,9 @@ if __name__ == "__main__":
             errata.append(audiofile)
             continue
         ################################################
-        # Downsampling
+        # Downsampling für v2.1
         ################################################
-        # ydem = decimate(signal, 2)  # keine Vorfilterung notwendig!
+        # signal = decimate(signal, 2)  # keine Vorfilterung notwendig!
 
         ################################################
         # Extrahiere Tick
@@ -415,6 +415,12 @@ if __name__ == "__main__":
             continue
     speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
     tick_vector = []
+    try:
+        outn = (str(datetime.now() + 'errata.csv'))
+        output = os.path.join(filepath + '\\' + CSV_V___ + '\\' + outn)
+        pd.DataFrame(errata).to_csv(output, index=True)
+    except:
+        print('Errata konnte nicht gespeichert werden')
 
     # TODO: Das hier muss an die richtige Stelle geschoben werden :-)
     # Ist nur zum testen um die Ausführung an einer geeigneten Stelle zu unterbrechen

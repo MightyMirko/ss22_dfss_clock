@@ -1,17 +1,19 @@
 
 
 ## CSV Aufbau
+
 ### Name
 
-*Anzahlnochnichtbearbeitet - Anzahlbearbeitet - output.csv*
+*Anzahlbearbeitet_von_GesamtAnzahl - output.csv*
 
 ### Spalten
+
 <index>,rectime,ZeigerWinkel,tickfolge,0,1,2,
 
 * Voller Dateiname (meistens 2x vorhanden..)
 * dateformat der Aufnahmezeit
-* Zeigerwinkel anhand der Aufnahmesekunde: 
-    
+* Zeigerwinkel anhand der Aufnahmesekunde:
+
     if (Zeiger >= 0) and (Zeiger < 7.5):
             out = 'oben'
     elif (Zeiger > 7.5) and (Zeiger < 22.5):
@@ -31,6 +33,7 @@
 * 0,1,...,6719
 Dies sind die float 32 PCM Werte.. Sie gehen von -1 bis +1. 
 Es wurde nicht überprüft ob der Wertebereich eingehalten worden ist
+
 >   IEEE float PCM in 32- or 64-bit format is supported, with or without mmap. Values exceeding [-1, +1] are not clipped. [scipy.wavfile]
 
 
