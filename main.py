@@ -309,7 +309,7 @@ if __name__ == "__main__":
     # Anlegen der Kontrollvariablen
     ################################################
     print('hello World')
-    do_test_mode = True  # Diverse Beschleuniger
+    do_test_mode = False  # Diverse Beschleuniger
     on_ms_surface = False
     plt.clf()
 
@@ -394,7 +394,7 @@ if __name__ == "__main__":
         # mmap = np.asarray(signal)
 
         nrg = np.sum(signal ** 2, axis=0)
-        if nrg <= progmin and nrg > progmax:
+        if nrg <= progmin or nrg > progmax:
             errata.append(audiofile)
             continue
         elif nrg > 10:
@@ -450,15 +450,15 @@ if __name__ == "__main__":
         if len(tick_vector) >= csvlength * 2:
             # pick = np.random.choice(tick_vector,1)
             # [x.plotme() for x in pick]
-            speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
+            # speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
             tick_vector = []
         else:
             continue
     # speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
     tick_vector = []
     try:
-        outn = (str(datetime.now()) + 'errata.csv')
-        output = os.path.join(filepath + '\\' + CSV_V___ + '\\' + outn)
+        outn = (str(datetime.now().strftime(form)) + '_errata.csv')
+        output = os.path.join(audio_dir + '\\' + CSV_V___ + '\\' + outn)
         pd.DataFrame(errata).to_csv(output, index=True)
     except:
         print('Errata konnte nicht gespeichert werden')
