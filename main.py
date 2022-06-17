@@ -15,15 +15,49 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.io import wavfile
+from scipy.signal import decimate
 from scipy.stats import t
 
 ###################
 # Anlegen globaler Var
 ###################
-CSV_V___ = 'csv_v2_0'
+CSV_V___ = 'csv_v2_1'
 plt.rcParams['figure.dpi'] = 150
 # plt.rcParams['interactive'] = True
 plt.rcParams['figure.figsize'] = (12, 9)
+
+
+def plotsounds(ax, data, filename='N/A', samplerate=48000, log=True,
+               xlab='Time [signal]', ylab='Amplitude', title='Ticken im Original'):
+    """
+    Plottet eine Spalte oder ein Vektor in Timedomain
+
+    :param title:
+    :param log:
+    :param param_dict:
+    :param abszisse:
+    :param ax:
+    :param data: hier kommt eine Series (Spalte Dataframe) hinein.
+    :param filename: Legendenname
+    :param samplerate: 96000 sind Standard. Wird für die Zeitachse genommen
+    :param xlab: Label auf Abszisse
+    :param ylab: Label auf Ordinate
+    :return:
+    """
+    tt = np.arange(0, len(data), 1)
+    out = ax.plot(tt, data, label=filename)
+    ax.legend(loc='upper right')
+    ax.grid(True)
+    ax.set_xscale('linear')
+    if log:
+        ax.set_yscale('log')
+    else:
+        ax.set_yscale('linear')
+    # plt.xlim(xmax=1.31, xmin=1)
+    ax.set_xlabel(xlab)
+    ax.set_ylabel(ylab)
+    ax.set_title(title)
+    return out
 
 
 def obj_size_fmt(num):
@@ -311,7 +345,7 @@ if __name__ == "__main__":
     # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
-    # wavfiles = np.random.choice(wavfiles,5)
+    wavfiles = np.random.choice(wavfiles, 23)
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
     ################################################
@@ -365,8 +399,8 @@ if __name__ == "__main__":
         ################################################
         # Downsampling für v2.1
         ################################################
-        # signal = decimate(signal, 2)  # keine Vorfilterung notwendig!
-
+        signal = decimate(signal, 2)  # keine Vorfilterung notwendig!
+        fs = 24e3
         ################################################
         # Extrahiere Tick
         ################################################
@@ -382,10 +416,10 @@ if __name__ == "__main__":
             # Finde den Tick..
             ################################################
             try:
-                olds, tmps, news = getTicks_fromSignal(feat, signal)
+                olds, tmps, news = getTicks_fromSignal(feat, signal, fs=fs)
             except ValueError:
                 break
-
+            # fig, ax = plt.subplots(2,1); plotsounds(ax[0],signal, log=False); plotsounds(ax[1],tmps, log=False); plt.show()
             ################################################
             # Validierung des Tick Signals..
             ################################################
@@ -402,6 +436,8 @@ if __name__ == "__main__":
             tick_object = CTick(audiofile, tmps, tickit)
             tick_vector.append(tick_object)
             i += 1
+
+            tick_object.plotme()
         ################################################
         # achtung while Schleife ende
         ################################################
