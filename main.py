@@ -457,7 +457,7 @@ if __name__ == "__main__":
     # speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
     tick_vector = []
     try:
-        outn = (str(datetime.now() + 'errata.csv'))
+        outn = (str(datetime.now()) + 'errata.csv')
         output = os.path.join(filepath + '\\' + CSV_V___ + '\\' + outn)
         pd.DataFrame(errata).to_csv(output, index=True)
     except:
