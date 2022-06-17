@@ -21,7 +21,8 @@ from scipy.stats import t
 ###################
 # Anlegen globaler Var
 ###################
-CSV_V___ = 'csv_v2_1'
+# Dezimierung und richtige Schwellwerte.. v2.2
+CSV_V___ = 'csv_v2_2'
 plt.rcParams['figure.dpi'] = 150
 # plt.rcParams['interactive'] = True
 plt.rcParams['figure.figsize'] = (12, 9)
@@ -119,6 +120,8 @@ class CTick:
         plt.show()
         plt.close(fig)
 
+    def berechne_fft(self):
+        # TODO:
         pass
 
     def add_tick(self, ):
@@ -450,11 +453,12 @@ if __name__ == "__main__":
         if len(tick_vector) >= csvlength * 2:
             # pick = np.random.choice(tick_vector,1)
             # [x.plotme() for x in pick]
-            # speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
+            # TODO: Abspeichern mittels Subprocess :-)? https://docs.python.org/3/library/subprocess.html
+            speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
             tick_vector = []
         else:
             continue
-    # speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
+    speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
     tick_vector = []
     try:
         outn = (str(datetime.now().strftime(form)) + '_errata.csv')
