@@ -427,7 +427,7 @@ if __name__ == "__main__":
             ################################################
             # Validierung des Tick Signals..
             ################################################
-            if len(tmps) > 6720:
+            if len(tmps) > (0.14 * fs):
                 errata.append(audiofile)
                 tmps = tmps[:6720]
 
