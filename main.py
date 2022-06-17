@@ -107,7 +107,7 @@ class CTick:
         :return:
         '''
         fig, axs = plt.subplots(2, 1, figsize=(12, 9))
-        tt = np.arange(0, 6720, 1)
+        tt = np.arange(0, len(self.ticksignal), 1)
         axs[0].plot(tt, self.ticksignal, label='Ticksignal')
         axs[0].legend()
         axs[0].set_title('Ticken im Signal {}'.format(self.filename))
@@ -155,8 +155,8 @@ def Klassenzuweisung(sec_wert):
 
 
 def getTicks_fromSignal(energy, signal, win=0.05, fs=48000,
-                        samples_before=1920,
-                        samples_after=4800):
+                        samples_before=0.04,
+                        samples_after=0.1):
     """
     Diese Funktion nimmt den Energie Vector der vorher erstellt worden ist, leitet diesen ab und detektiert die
     Stelle (indexofpeak) wo das Maximum ist (quasi die x = y.max()). Dann wird geschnitten, anhand der Anzahl Samples
@@ -169,6 +169,8 @@ def getTicks_fromSignal(energy, signal, win=0.05, fs=48000,
     :param fs: samplerate
     :return:
     """
+    samples_after = samples_after * fs
+    samples_before = samples_before * fs
 
     d_energy = np.diff(energy)
     indexofpeak = 0
@@ -307,8 +309,8 @@ if __name__ == "__main__":
     # Anlegen der Kontrollvariablen
     ################################################
     print('hello World')
-    do_test_mode = False  # Diverse Beschleuniger
-    on_ms_surface = True
+    do_test_mode = True  # Diverse Beschleuniger
+    on_ms_surface = False
     plt.clf()
 
     ################################################
@@ -345,7 +347,9 @@ if __name__ == "__main__":
     # wavfiles = wavfiles[:400]
     anzahl = len(wavfiles)
     anzahlnochnicht = anzahl
-    # wavfiles = np.random.choice(wavfiles, 23)
+    if do_test_mode:
+        wavfiles = np.random.choice(wavfiles, 23)
+
     ################################################
     # Schätzung unbekannter Parameter über die t-verteilte Grundgesamtheit
     ################################################
@@ -437,7 +441,8 @@ if __name__ == "__main__":
             tick_vector.append(tick_object)
             i += 1
 
-            #tick_object.plotme()
+            if do_test_mode:
+                tick_object.plotme()
         ################################################
         # achtung while Schleife ende
         ################################################
@@ -449,7 +454,7 @@ if __name__ == "__main__":
             tick_vector = []
         else:
             continue
-    speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
+    # speichere_Dataframe(tick_vector, anzahl=anzahl, bearbeitet=anzahl_bearbeitet, filepath=audio_dir)
     tick_vector = []
     try:
         outn = (str(datetime.now() + 'errata.csv'))
