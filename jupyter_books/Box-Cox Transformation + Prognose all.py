@@ -5,31 +5,17 @@ Created on Tue Jun 14 11:56:40 2022
 @author: Alexander
 """
 
-#Bibliotheken
-import numpy as np 
-import pandas as pd 
 import matplotlib.pyplot as plt
-import os
-
-from scipy.io import wavfile
-#from scipy import signal as sig
-from scipy.signal import butter
-from scipy.signal import sosfilt
-from scipy.signal import hilbert
-from scipy.fft import fft, fftfreq
-from scipy.signal import windows
-from scipy.signal import medfilt
-from scipy.stats import norm, t, chi2, f, weibull_min, gamma
-from scipy.stats import boxcox
+# Bibliotheken
+import numpy as np
+import pandas as pd
 from scipy.special import inv_boxcox
-
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import LabelEncoder
-
+from scipy.stats import boxcox
+# from scipy import signal as sig
+from scipy.stats import t
 
 # Daten einlesen
-DATA_FILE_TRAIN = 'gesamtdaten_energien.csv'
+DATA_FILE_TRAIN = '../alte_dateien/gesamtdaten_energien.csv'
 df = pd.read_csv(DATA_FILE_TRAIN, header=0)
 # Datenübertragen
 energie = df.iloc[:, 1]

@@ -37,20 +37,20 @@ Eingangssignale.
 Bild 1:
 ![alt text][fig1]
 
-[fig1]: bilder_doku/Spurpanel001.png "Bild einer gebutterten FFT"
+[fig1]: ../bilder_doku/Spurpanel001.png "Bild einer gebutterten FFT"
 
 
 Bild 2:
 ![alt text][fig2]
 
-[fig2]: bilder_doku/Spurpanel004.png "Vergrößerte Darstellung der ersten Spur und des ersten Tickens"
+[fig2]: ../bilder_doku/Spurpanel004.png "Vergrößerte Darstellung der ersten Spur und des ersten Tickens"
 
 
  
 Bild 3:
 ![alt text][fig3]
 
-[fig3]: bilder_doku/gebutterte_fft.png "Bild einer gebutterten FFT"
+[fig3]: ../bilder_doku/gebutterte_fft.png "Bild einer gebutterten FFT"
 
 Das Bild [fig3] zeigt die Fourier-transformierte einer durch das Butterworth-Filter angepasste Sound-Datei. Diese Datei ist 11.5 Sekunden lang und beeinhaltet häufige Frequenzen um 2kHz und 7 kHz.
 

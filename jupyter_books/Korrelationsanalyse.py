@@ -5,29 +5,15 @@ Created on Sun Jun 12 17:54:00 2022
 @author: Alexander
 """
 
-#Bibliotheken
-import numpy as np 
-import pandas as pd 
 import matplotlib.pyplot as plt
-import os
+# Bibliotheken
+import numpy as np
+import pandas as pd
 
-from scipy.io import wavfile
-#from scipy import signal as sig
-from scipy.signal import butter
-from scipy.signal import sosfilt
-from scipy.signal import hilbert
-from scipy.fft import fft, fftfreq
-from scipy.signal import windows
-from scipy.signal import medfilt
-from scipy.stats import norm, t, chi2, f, weibull_min, gamma
-
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import LabelEncoder
+# from scipy import signal as sig
 
 
-
-#C:\Users\Alexander\PycharmProjects\ss22_dfss_clock\data\csv
+# C:\Users\Alexander\PycharmProjects\ss22_dfss_clock\data\csv
 
 DATA_FILE_TRAIN = 'data/csv/26-29-output.csv'
 

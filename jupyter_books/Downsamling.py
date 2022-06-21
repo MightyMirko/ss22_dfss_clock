@@ -5,23 +5,12 @@ Created on Wed Jun 14 11:18:48 2022
 @author: Alexander
 """
 
-#Bibliotheken
-import numpy as np 
-import pandas as pd 
 import matplotlib.pyplot as plt
-import os
-
-from scipy.io import wavfile
-#from scipy import signal as sig
-from scipy.signal import butter
-from scipy.signal import sosfilt
-from scipy.signal import hilbert
-from scipy.fft import fft, fftfreq
-from scipy.signal import windows
-from scipy.signal import medfilt
-from scipy.stats import norm, t, chi2, f, weibull_min, gamma
-
+# Bibliotheken
+import numpy as np
 from scipy.signal import decimate
+
+# from scipy import signal as sig
 
 
 # Eingabewerte für Testumgebung

@@ -4,11 +4,8 @@
 import os.path
 from os import listdir
 
-import numpy
-import numpy as np
 import pandas
-from tqdm.notebook import trange, tqdm
-from time import sleep
+from tqdm.notebook import tqdm
 
 dirs = [r'H:\Messung_BluetoothMikro\Messung 3\Audios', r'H:\Messung_BluetoothMikro\Messung 3\Bilder']
 

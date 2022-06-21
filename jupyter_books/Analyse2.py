@@ -1,28 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon May 30 21:20:06 2022
+Created on Mon Apr 25 13:47:33 2022
 
 @author: Alexander
 """
 
-#Bibliotheken
-import numpy as np 
-import pandas as pd 
 import matplotlib.pyplot as plt
-
-from scipy.io import wavfile
-#from scipy import signal as sig
-from scipy.signal import butter
-from scipy.signal import sosfilt
-from scipy.signal import hilbert
+# Bibliotheken
+import numpy as np
+import pandas as pd
+# from scipy import signal as sig
 from scipy.fft import fft, fftfreq
+from scipy.io import wavfile
 from scipy.signal import windows
-from scipy.signal import medfilt
 
-#Funktionen
+# Funktionen
 ''' FFT-Funktion mit Fensterfunktionen und Plot '''
-def FFT_function(signal, samplerate, win = 'none', pl=False, log=False):
-    #Anzahl Sampels erfassen & zugehöriger zeitvektor erstellen
+
+
+def FFT_function(signal, samplerate, win='none', pl=False, log=False):
+    # Anzahl Sampels erfassen & zugehöriger zeitvektor erstellen
     sig_length = len(signal)
     # Abtastzeit
     T = 1 / samplerate
@@ -72,18 +69,15 @@ def FFT_func(signal, samplerate):
     yf = fft(y)[:sig_length//2]
     return xf, 2/sig_length *np.abs(yf)
 
-
 #%%
 
 #einlesen & konvertieren
 samplerate, data = wavfile.read('audio_for_test.wav')
 signal = pd.Series(data) 
 
-#Anzahl Sampels erfassen & zugehöriger Zeitvektor erstellen
+#Anzahl Sampels erfassen & zugehöriger zeitvektor erstellen
 sig_length = len(signal)
 t = np.linspace(0.0, sig_length/samplerate, num=sig_length)
-# Abtastzeit
-T = 1/samplerate
 
 #plot Signal gesamt
 plt.figure()
@@ -107,7 +101,6 @@ plt.title('Ticken im original Signal')
 plt.show()
 
 #%%
-
 
 ''' FFT-Analyse'''
 ''' FFT-Analyse Gesamtsignal '''
@@ -169,68 +162,9 @@ plt.ylabel('Amplitude')
 plt.title('FFT des Tickens')
 plt.show()
 
+#%%
+
 """ Ergebnis: 
     Das Ticken enthält Frequenzen von 0 bis ca. 7000 Hz 
     -> Tiefpass benötigt
     -> Hochpass optional """
-    
-    
-#%%
-
-''' Butterworth-Filter '''
-''' Tiefpass '''
-
-fg = 7000
-#fg = 500
-sos = butter(10, fg, 'low', fs=samplerate, output='sos')
-filtered = sosfilt(sos, signal)
-
-# nur zur Kontrolle ob sich das Signal verändert
-
-#plot gefiltertes Signal gesamt
-plt.figure()
-plt.plot(t, filtered)
-plt.grid(True)
-plt.xlabel('Zeit in s')
-plt.ylabel('Amplitude')
-plt.title('TP gefiltert mit fg = %i' %fg)
-plt.show()
-
-#plot Ticken
-plt.figure()
-#xmin, xmax, ymin, ymax = 1.2, 1.3, -0.003, 0.003
-#plt.axis([xmin, xmax, ymin, ymax])
-plt.xlim(1.34, 1.45)
-plt.plot(t, filtered)
-plt.grid(True)
-plt.xlabel('Zeit in s')
-plt.ylabel('Amplitude')
-plt.title('TP gefiltert mit fg = %i' %fg)
-plt.show()
-
-
-
-#%%
-
-''' FFT-Analyse des Tickens nach den Filtern '''
-
-tick_length = 69600-64320
-w = windows.hamming(tick_length)
-
-# Transformation
-x, y = FFT_func(filtered[64320:69600]*w, samplerate)
-
-# Plot
-plt.loglog(x, y)
-plt.grid(True)
-plt.xlabel('Frequenz in Hz')
-plt.ylabel('Amplitude')
-plt.title('FFT des Tickens')
-plt.show()
-
-plt.semilogy(x, y)
-plt.grid(True)
-plt.xlabel('Frequenz in Hz')
-plt.ylabel('Amplitude')
-plt.title('FFT des Tickens')
-plt.show()
