@@ -89,7 +89,7 @@ plt.tight_layout()
 
 ''' Transformation '''
 Xt, lmbda = boxcox(energie)
-print(Xt)
+#print(Xt)
 
 #%%
 

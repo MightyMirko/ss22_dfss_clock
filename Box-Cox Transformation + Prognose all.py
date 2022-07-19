@@ -43,7 +43,7 @@ energie = df.iloc[:, 1]
     0,0 < energie < 800 => 3.2354675179262467 '''
     
 # Vorselektieren
-upper_lim = 800
+upper_lim = 5.5
 lower_lim = 0.0
 #X = np.array(energie.drop(energie[((energie<0.2) | (energie>8))].index))
 X = np.array(energie[((energie>lower_lim) & (energie<upper_lim))])
@@ -53,7 +53,7 @@ print(Xt)
 inv = inv_boxcox(Xt, lmbda)
 print(inv)
 
-h_abs1, x1 = np.histogram(X, bins=500)
+h_abs1, x1 = np.histogram(X, bins=200)
 # plot histogramm
 ax = plt.figure(figsize=(6, 4)).subplots(1, 1)
 ax.hist(X, x1 , histtype='bar', weights=np.ones(X.shape)/X.shape, rwidth=0.9, cumulative=False)
@@ -61,7 +61,8 @@ ax.grid(True, which= 'both', axis='both', linestyle='--')
 ax.set_xlabel('Energie')
 ax.set_ylabel('Häufigkeit h(E)')
 #ax.set_ylim(top=0.25)
-ax.set_title('vor Transformation mit ' + str(lower_lim) + ' < energie < ' + str(upper_lim))
+ax.set_title('Energieverteilung vor der Transformation')
+#ax.set_title('vor Transformation mit ' + str(lower_lim) + ' < Energie < ' + str(upper_lim))
 plt.tight_layout()
 
 
@@ -73,7 +74,8 @@ ax.grid(True, which= 'both', axis='both', linestyle='--')
 ax.set_xlabel('Energie')
 ax.set_ylabel('Häufigkeit h(E)')
 #ax.set_ylim(top=0.25)
-ax.set_title('nach Transformation mit ' + str(lower_lim) + ' < energie < ' + str(upper_lim))
+#ax.set_title('Energieverteilung nach der Transformation')
+ax.set_title('nach Transformation mit ' + str(lower_lim) + ' < Energie < ' + str(upper_lim))
 plt.tight_layout()
 
 
